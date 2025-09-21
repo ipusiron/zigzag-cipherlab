@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none';" />
+  <title>Zigzag CipherLab - ジグザグ暗号</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-content">
+      <div>
+        <h1>Zigzag CipherLab - ジグザグ暗号ツール</h1>
+        <p class="lead">
+          鍵（横一列のアルファベット）を基準に、平文を<span class="mono">点→線</span>で折れ線化する幾何学サイファ。<br/>
+          「暗号化」で鍵と破線を隠すと、折れ線だけが暗号文になります。
+        </p>
+      </div>
+      <button id="themeToggle" class="theme-toggle" title="テーマ切替">☀️</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <nav class="tabs" role="tablist" aria-label="機能タブ">
+      <button class="tab active" data-tab="tab-key" aria-selected="true">鍵生成</button>
+      <button class="tab" data-tab="tab-enc" aria-selected="false">暗号化</button>
+      <button class="tab" data-tab="tab-dec" aria-selected="false">復号</button>
+      <button class="tab" data-tab="tab-about" aria-selected="false">座学</button>
+    </nav>
+
+    <!-- 鍵生成 -->
+    <section id="tab-key" class="panel active" role="tabpanel">
+      <div class="two-col">
+        <div class="controls">
+          <label for="keyInput" class="label">鍵（アルファベット配列。重複／欠落可）</label>
+          <textarea id="keyInput" class="textarea" rows="3">ABCDEFGHIJKLMNOPQRSTUVWXYZ</textarea>
+
+          <div class="button-row">
+            <button id="btnKeyApply" class="btn primary">適用</button>
+            <button id="btnKeyShuffle" class="btn">シャッフル</button>
+            <button id="btnKeyReset" class="btn ghost">リセット</button>
+          </div>
+
+          <div class="stats">
+            <div>長さ：<span id="statLen">26</span></div>
+            <div>重複数：<span id="statDup">0</span></div>
+            <div>欠落：<span id="statMiss">0</span></div>
+          </div>
+          <p class="hint">
+            ※ 縦配置・横配置は本質的に同じです。本ツールでは横一列に鍵を表示します。
+          </p>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header">プレビュー</div>
+          <svg id="svgKeyPreview" class="viz" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" aria-label="鍵プレビュー"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 暗号化 -->
+    <section id="tab-enc" class="panel" role="tabpanel">
+      <div class="two-col">
+        <div class="controls">
+          <label for="plainInput" class="label">平文（自動で大文字化。鍵にない文字はスキップ）</label>
+          <textarea id="plainInput" class="textarea" rows="6" placeholder="HELLOWORLD"></textarea>
+
+          <label class="toggle">
+            <input type="checkbox" id="chkRealtime" checked />
+            <span>リアルタイム描画</span>
+          </label>
+
+          <label class="toggle">
+            <input type="checkbox" id="chkShowKeyEnc" checked />
+            <span>鍵を表示</span>
+          </label>
+
+          <div class="button-row">
+            <button id="btnEncrypt" class="btn primary">暗号化</button>
+          </div>
+
+          <label class="label" for="encryptedPoints">暗号文（折れ線ポイント）</label>
+          <textarea id="encryptedPoints" class="textarea mono" rows="3" readonly placeholder="暗号化ボタンを押すと、ここに折れ線ポイントが表示されます"></textarea>
+
+          <div class="export-row">
+            <button id="btnExportPoints" class="btn">折れ線ポイントをコピー</button>
+            <button id="btnDownloadSVG" class="btn">SVGをダウンロード</button>
+            <span id="exportMsg" class="msg"></span>
+          </div>
+          
+          <p class="hint">
+            ※ 重複鍵がある場合は暗号化時にランダム選択されます。
+          </p>
+
+          <div class="danger-zone">
+            <hr class="separator" />
+            <button id="btnEncClear" class="btn danger">すべてクリア</button>
+          </div>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header">
+            暗号化ビジュアライザー
+            <div class="viz-controls">
+              <button id="btnEncStepPlay" class="btn-small">ステップ再生</button>
+              <button id="btnEncStepStop" class="btn-small">停止</button>
+            </div>
+          </div>
+          <svg id="svgEncrypt" class="viz" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" aria-label="暗号化ビジュアライザ"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 復号 -->
+    <section id="tab-dec" class="panel" role="tabpanel">
+      <div class="two-col">
+        <div class="controls">
+          <label for="pointsInput" class="label">
+            折れ線ポイント（例：<span class="mono">x1,y1 x2,y2 x3,y3 ...</span>）
+          </label>
+          <textarea id="pointsInput" class="textarea" rows="4" placeholder="例）120,160 195,220 240,260"></textarea>
+          <div id="decErrorMsg" class="error-msg"></div>
+
+          <label class="toggle">
+            <input type="checkbox" id="chkShowKeyDec" checked />
+            <span>鍵を表示</span>
+          </label>
+
+          <div class="button-row">
+            <button id="btnSyncFromEnc" class="btn">暗号化タブから同期</button>
+          </div>
+
+          <div class="button-row">
+            <button id="btnDecode" class="btn primary">復号</button>
+          </div>
+
+          <label class="label" for="decodedOutput">復元結果</label>
+          <textarea id="decodedOutput" class="textarea mono" rows="3" readonly></textarea>
+
+          <p class="hint">
+            ※ 復号は「ポイントをY座標昇順でたどる → 近い列の文字へ写像」します。<br/>
+            鍵にない文字は復元されません。
+          </p>
+
+          <div class="danger-zone">
+            <hr class="separator" />
+            <button id="btnDecClear" class="btn danger">すべてクリア</button>
+          </div>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header">
+            復号ビジュアライザー
+            <div class="viz-controls">
+              <button id="btnDecStepPlay" class="btn-small">ステップ再生</button>
+              <button id="btnDecStepStop" class="btn-small">停止</button>
+            </div>
+          </div>
+          <svg id="svgDecrypt" class="viz" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" aria-label="復号ビジュアライザ"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 座学 -->
+    <section id="tab-about" class="panel" role="tabpanel">
+      <article class="doc">
+        <div class="accordion">
+
+          <!-- ジグザグ暗号とは -->
+          <div class="accordion-item">
+            <button class="accordion-header active" data-target="about-basic">
+              <h2>ジグザグ暗号とは</h2>
+              <span class="accordion-icon">▼</span>
+            </button>
+            <div class="accordion-content active" id="about-basic">
+              <p>
+                ジグザグ暗号（Zigzag Cipher）は、文字列ではなく<strong>点と線（折れ線）</strong>を暗号文とする
+                <strong>幾何学サイファ</strong>の一種です。<br>
+                鍵（アルファベット配列の紙）に沿って平文文字の位置に点を打ち、隣接点を結んでいくことで、
+                折れ線が得られます。鍵を外すと、第三者には単なるジグザグ線にしか見えません。
+              </p>
+              <ul>
+                <li>分類：江戸川乱歩「暗号記法の種類」における <em>線代用法</em></li>
+                <li>起源：チャールズ1世の発明説がある一方、古代ギリシアのアイネイアスにも類似の着想が見られ、起源は確定的でない</li>
+                <li>鍵の自由度：配列は任意（順列・不規則・欠落・重複すべて可）</li>
+                <li>縦配置・横配置は本質的に同じ</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 他の古典暗号との比較 -->
+          <div class="accordion-item">
+            <button class="accordion-header" data-target="about-comparison">
+              <h2>他の古典暗号との比較</h2>
+              <span class="accordion-icon">▶</span>
+            </button>
+            <div class="accordion-content" id="about-comparison">
+              <div class="table-container">
+                <table class="comparison-table">
+                  <thead>
+                    <tr>
+                      <th>暗号方式</th>
+                      <th>分類</th>
+                      <th>暗号文形式</th>
+                      <th>鍵</th>
+                      <th>解読難易度</th>
+                      <th>特徴</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="highlight-row">
+                      <td><strong>ジグザグ暗号</strong></td>
+                      <td>線代用法</td>
+                      <td>折れ線・座標</td>
+                      <td>アルファベット配列</td>
+                      <td class="difficulty-medium">中</td>
+                      <td>視覚的暗号、重複鍵対応</td>
+                    </tr>
+                    <tr>
+                      <td>シーザー暗号</td>
+                      <td>単一換字式</td>
+                      <td>アルファベット</td>
+                      <td>シフト数(1-25)</td>
+                      <td class="difficulty-low">低</td>
+                      <td>もっとも基本的な換字暗号</td>
+                    </tr>
+                    <tr>
+                      <td>単一換字暗号</td>
+                      <td>単一換字式</td>
+                      <td>アルファベット</td>
+                      <td>置換表(26!)</td>
+                      <td class="difficulty-medium">中</td>
+                      <td>頻度分析で解読可能</td>
+                    </tr>
+                    <tr>
+                      <td>ヴィジュネル暗号</td>
+                      <td>多表式</td>
+                      <td>アルファベット</td>
+                      <td>キーワード</td>
+                      <td class="difficulty-high">高</td>
+                      <td>周期性が弱点</td>
+                    </tr>
+                    <tr>
+                      <td>プレイフェア暗号</td>
+                      <td>多表式</td>
+                      <td>アルファベット</td>
+                      <td>5×5格子</td>
+                      <td class="difficulty-high">高</td>
+                      <td>2文字組での暗号化</td>
+                    </tr>
+                    <tr>
+                      <td>四方暗号</td>
+                      <td>多表式</td>
+                      <td>アルファベット</td>
+                      <td>4つの5×5格子</td>
+                      <td class="difficulty-high">高</td>
+                      <td>プレイフェアの拡張</td>
+                    </tr>
+                    <tr>
+                      <td>レールフェンス暗号</td>
+                      <td>転置式</td>
+                      <td>アルファベット</td>
+                      <td>レール数</td>
+                      <td class="difficulty-low">低</td>
+                      <td>ジグザグ配置での転置</td>
+                    </tr>
+                    <tr>
+                      <td>棚暗号</td>
+                      <td>転置式</td>
+                      <td>アルファベット</td>
+                      <td>列順序</td>
+                      <td class="difficulty-medium">中</td>
+                      <td>矩形配置での転置</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ジグザグ暗号の独自性 -->
+          <div class="accordion-item">
+            <button class="accordion-header" data-target="about-uniqueness">
+              <h2>ジグザグ暗号の独自性</h2>
+              <span class="accordion-icon">▶</span>
+            </button>
+            <div class="accordion-content" id="about-uniqueness">
+              <ul>
+                <li><strong>唯一の「図形暗号」</strong>として、文字ではなく座標・線分が暗号文</li>
+                <li><strong>視覚的暗号</strong>として、数学的解読よりも幾何学的復元が必要</li>
+                <li><strong>重複鍵</strong>により、単一換字と多表式の特性を併せ持つ</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer">
+      🔗 GitHubリポジトリはこちら（
+      <a href="https://github.com/ipusiron/zigzag-cipherlab" target="_blank" rel="noopener">ipusiron/zigzag-cipherlab</a> ）
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
