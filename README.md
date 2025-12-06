@@ -1,11 +1,36 @@
 <!--
 ---
-title: Zigzag CipherLab
-category: classical-cryptography
+id: day072
+slug: zigzag-cipherlab
+
+title: "Zigzag CipherLab"
+
+subtitle_ja: "ジグザグ暗号ツール"
+subtitle_en: "Zigzag Cipher Visualization Tool"
+
+description_ja: "文字を点と線に変換して暗号文を生成する幾何学サイファのインタラクティブ学習ツール。鍵となるアルファベット配列に沿って平文を折れ線に変換し、視覚的な暗号化・復号プロセスを体験できます。"
+description_en: "An interactive educational tool for the Zigzag Cipher, a geometrical cipher where plaintext letters are plotted as points along an alphabet key and connected into a zigzag polyline. Without the key, the figure looks like meaningless lines."
+
+category_ja:
+  - 古典暗号
+category_en:
+  - Classical Cryptography
+
 difficulty: 1
-description: A geometrical cipher where plaintext letters are plotted as points along an alphabet key and connected into a zigzag polyline. Without the key, the figure looks like meaningless lines.
-tags: [zigzag-cipher, geometrical, classical-crypto, visualization, education, javascript]
-demo: https://ipusiron.github.io/zigzag-cipherlab/
+
+tags:
+  - zigzag-cipher
+  - geometrical-cipher
+  - classical-crypto
+  - visualization
+  - education
+  - javascript
+  - svg
+
+repo_url: "https://github.com/ipusiron/zigzag-cipherlab"
+demo_url: "https://ipusiron.github.io/zigzag-cipherlab/"
+
+hub: true
 ---
 -->
 
