@@ -1,0 +1,8 @@
+{
+  "name": "zigzag-cipherlab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

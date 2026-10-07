@@ -1,23 +1,23 @@
 /* =========================
    Zigzag CipherLab – script
+   画面の処理だけを持つ。計算は js/zz-core.js、文言は js/messages.js
    ========================= */
+
+const ZZ = window.ZZCore;
+const M = window.ZZMessages;
+const t = (key, vars) => M.t(key, vars);
+// 重複鍵の列の選択とシャッフルは予測不能な乱数（crypto.getRandomValues）で行う
+const randomBytes = ZZ.cryptoBytes(window.crypto);
+const chooser = ZZ.randomChooser(randomBytes);
 
 // --- State ---
 const state = {
   key: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  viz: {
-    width: 1200,
-    height: 600,
-    marginX: 40,
-    topY: 70,         // 鍵（文字）Y
-    guideTopY: 100,   // 破線開始Y
-    rowGap: 24,       // 段の間隔
-    colGap: 40,       // 列の間隔
-  },
+  viz: ZZ.LAYOUT,   // 列の間隔・段の間隔などの定数（計算部と共有）
   enc: {
-    lastPoints: [],   // [{x,y}] 直近暗号化の座標群
+    lastPoints: [],   // [{x,y,idx,row,ch,i}] 直近の暗号化の点
     guidesHidden: false,
-    selectedIndices: new Map(), // Map<plaintext_position, selected_key_index>
+    selectedIndices: new Map(), // Map<"位置_文字", 選んだ列>（同じ平文は同じ折れ線になる）
     timer: null,
     stepIndex: 0,
   },
@@ -33,49 +33,78 @@ const state = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+// --- Timers ---
+function stopTimers(){
+  const wasRunning = state.enc.timer !== null || state.dec.timer !== null;
+  clearInterval(state.enc.timer); state.enc.timer = null;
+  clearInterval(state.dec.timer); state.dec.timer = null;
+  return wasRunning;
+}
+
 // --- Tabs ---
-$$('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    $$('.tab').forEach(b=>b.classList.remove('active'));
-    $$('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    $('#'+btn.dataset.tab).classList.add('active');
+function activateTab(btn){
+  // 再生中のタイマーは止める（非表示のパネルの裏で描画と出力が進まないように）
+  const wasRunning = stopTimers();
+  $$('.tab').forEach(b=>{
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+    b.setAttribute('tabindex', '-1');
   });
+  $$('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
+  btn.removeAttribute('tabindex');
+  $('#'+btn.dataset.tab).classList.add('active');
+  if(wasRunning){ drawEncryptViz(); drawDecryptViz(); }
+  // 表示されたパネルの図を枠の幅に合わせ直す
+  $$('.panel.active .viz').forEach(fitSVG);
+}
+$$('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>activateTab(btn));
+});
+// 矢印キーでタブを移動（WAI-ARIA のタブの作法）
+$('.tabs').addEventListener('keydown', (ev)=>{
+  const tabs = $$('.tab');
+  const i = tabs.indexOf(document.activeElement);
+  if(i < 0) return;
+  let next = null;
+  if(ev.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+  else if(ev.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+  else if(ev.key === 'Home') next = tabs[0];
+  else if(ev.key === 'End') next = tabs[tabs.length - 1];
+  if(!next) return;
+  ev.preventDefault();
+  activateTab(next);
+  next.focus();
 });
 
+// --- Notices ---
+function showNotice(el, text){
+  el.textContent = text;
+  el.hidden = text === '';
+}
+
 // --- Key helpers ---
-function normalizeKey(raw){
-  // Sanitize input and limit length to prevent excessive processing
-  if(typeof raw !== 'string') return '';
-  const sanitized = raw.replace(/[^A-Za-z]/g,'').toUpperCase();
-  return sanitized.length > 1000 ? sanitized.substring(0, 1000) : sanitized;
-}
-function keyStats(key){
-  const len = key.length;
-  const counts = {};
-  for(const ch of key){ counts[ch]=(counts[ch]||0)+1; }
-  const dup = Object.values(counts).filter(c=>c>1).reduce((a,b)=>a+(b-1),0);
-  const set = new Set(key.split(''));
-  const miss = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c=>!set.has(c)).length;
-  return { len, dup, miss };
-}
 function setKey(newKey){
   state.key = newKey;
-  state.enc.selectedIndices.clear(); // Clear cached positions when key changes
   // 更新：統計 & プレビュー
-  const st = keyStats(newKey);
+  const st = ZZ.keyStats(newKey);
   $('#statLen').textContent = st.len;
   $('#statDup').textContent = st.dup;
   $('#statMiss').textContent = st.miss;
+  let notice = '';
+  if(newKey.length === 0) notice = t('key.empty');
+  else if(st.miss > 0) notice = t('key.missing', { letters: st.missing.join(' ') });
+  showNotice($('#keyNotice'), notice);
   drawKeyPreview();
-  // 他ビューワも鍵に合わせて更新
+  // 他ビューワも鍵に合わせて更新（位置ごとの記録は、鍵の文字が変わった位置だけ選び直される）
   drawEncryptViz();
   drawDecryptViz();
 }
 
 // --- Layout helpers ---
-function colX(idx){ return state.viz.marginX + idx*state.viz.colGap; }
-function rowY(row){ return state.viz.guideTopY + row*state.viz.rowGap; }
+const colX = ZZ.colX;
+const rowY = ZZ.rowY;
 
 // --- SVG helpers ---
 function clearSVG(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
@@ -84,10 +113,39 @@ function elSVG(tag, attrs={}){
   for(const [k,v] of Object.entries(attrs)){ e.setAttribute(k, v); }
   return e;
 }
+// 図は自然な大きさ（1単位＝1px）で描き、枠より広いときは枠の幅に合わせて縮める。ただし MIN_SCALE より小さくはせず、
+// 残りは枠の中のスクロールで見せる（文字が読めない大きさまで縮めない）
+const MIN_SCALE = 0.55;
+const viewBoxOf = new Map();  // svg → {width, height}
+function fitSVG(svg){
+  const vb = viewBoxOf.get(svg);
+  if(!vb) return;
+  const wrap = svg.parentElement;
+  const avail = wrap ? wrap.clientWidth : 0;
+  const scale = avail > 0 ? Math.min(1, Math.max(MIN_SCALE, avail / vb.width)) : 1;
+  svg.setAttribute('width', String(Math.round(vb.width * scale)));
+  svg.setAttribute('height', String(Math.round(vb.height * scale)));
+  svg.dataset.scale = String(scale);
+}
+function setViewBox(svg, vb){
+  svg.setAttribute('viewBox', `0 0 ${vb.width} ${vb.height}`);
+  viewBoxOf.set(svg, vb);
+  fitSVG(svg);
+}
+// 再生中の点が見えるように枠をスクロールする
+function revealPoint(svg, p){
+  const wrap = svg.parentElement;
+  if(!wrap) return;
+  const s = Number(svg.dataset.scale) || 1;
+  const x = p.x * s, y = p.y * s;
+  if(y > wrap.scrollTop + wrap.clientHeight - 40) wrap.scrollTop = Math.max(0, y - wrap.clientHeight * 0.6);
+  else if(y < wrap.scrollTop + 40) wrap.scrollTop = Math.max(0, y - 40);
+  if(x > wrap.scrollLeft + wrap.clientWidth - 40) wrap.scrollLeft = Math.max(0, x - wrap.clientWidth * 0.6);
+  else if(x < wrap.scrollLeft + 40) wrap.scrollLeft = Math.max(0, x - 40);
+}
 
 // --- Draw Key Guides (letters + dashed) ---
-function drawKeyGuides(svg, key, maxHeight){
-  const height = maxHeight || state.viz.height;
+function drawKeyGuides(svg, key, height){
   // 文字列
   for(let i=0;i<key.length;i++){
     const x = colX(i);
@@ -109,92 +167,16 @@ function drawKeyGuides(svg, key, maxHeight){
 function drawKeyPreview(){
   const svg = $('#svgKeyPreview');
   clearSVG(svg);
-  drawKeyGuides(svg, state.key);
-}
-
-// --- Find all indices of a character in the key ---
-function findAllIndices(key, char){
-  const indices = [];
-  for(let i = 0; i < key.length; i++){
-    if(key[i] === char) indices.push(i);
-  }
-  return indices;
-}
-
-// --- Map plaintext -> points (skip unknown) ---
-function plaintextToPoints(plain, key){
-  // Input validation and sanitization
-  if(typeof plain !== 'string' || typeof key !== 'string') return [];
-  if(plain.length > 10000) plain = plain.substring(0, 10000); // Limit length
-
-  const P = plain.toUpperCase();
-  let row = 0;
-  const pts = [];
-
-  // Create a unique key for each character position
-  for(let i = 0; i < P.length; i++){
-    const ch = P[i];
-    if(!/[A-Z]/.test(ch)) continue;
-
-    const indices = findAllIndices(key, ch);
-    if(indices.length === 0) continue;
-
-    // Use cached position if available, otherwise select randomly
-    const cacheKey = `${i}_${ch}`;
-    let idx;
-
-    if(state.enc.selectedIndices.has(cacheKey)){
-      idx = state.enc.selectedIndices.get(cacheKey);
-      // Validate that the cached index is still valid
-      if(key[idx] !== ch){
-        // Key has changed, need to reselect
-        idx = indices[Math.floor(Math.random() * indices.length)];
-        state.enc.selectedIndices.set(cacheKey, idx);
-      }
-    } else {
-      // First time seeing this position, randomly select
-      idx = indices[Math.floor(Math.random() * indices.length)];
-      state.enc.selectedIndices.set(cacheKey, idx);
-    }
-
-    const x = colX(idx);
-    const y = rowY(row);
-    pts.push({x,y});
-    row += 1;
-  }
-
-  // Clean up old cached positions that are no longer needed
-  const currentKeys = new Set();
-  for(let i = 0; i < P.length; i++){
-    if(/[A-Z]/.test(P[i])){
-      currentKeys.add(`${i}_${P[i]}`);
-    }
-  }
-  for(const key of state.enc.selectedIndices.keys()){
-    if(!currentKeys.has(key)){
-      state.enc.selectedIndices.delete(key);
-    }
-  }
-
-  return pts;
-}
-
-// --- Adjust SVG height based on content ---
-function adjustSVGHeight(svg, points){
-  if(points.length === 0) {
-    svg.setAttribute('viewBox', `0 0 ${state.viz.width} ${state.viz.height}`);
-    return;
-  }
-  const maxY = Math.max(...points.map(p => p.y));
-  const newHeight = Math.max(state.viz.height, maxY + 80); // Add padding
-  svg.setAttribute('viewBox', `0 0 ${state.viz.width} ${newHeight}`);
+  const vb = ZZ.viewBox(state.key.length, 0);
+  setViewBox(svg, vb);
+  drawKeyGuides(svg, state.key, vb.height);
 }
 
 // --- Draw polyline + points ---
 function drawPolylineWithPoints(svg, points){
   if(points.length===0) return;
   // polyline
-  const ptsStr = points.map(p=>`${p.x},${p.y}`).join(' ');
+  const ptsStr = ZZ.pointsToText(points);
   const poly = elSVG('polyline', { points: ptsStr, class:'polyline' });
   svg.appendChild(poly);
   // points
@@ -205,27 +187,54 @@ function drawPolylineWithPoints(svg, points){
   return {poly, ptsStr};
 }
 
+// 今の点を強調する丸
+function drawStepMarker(svg, p){
+  svg.appendChild(elSVG('circle', { cx:p.x, cy:p.y, r:5.2, class:'point step' }));
+}
+
+// --- Encrypt (current plaintext -> points) ---
+function encryptCurrent(){
+  const plain = $('#plainInput').value || '';
+  return ZZ.encrypt(plain, state.key, { chooser, cache: state.enc.selectedIndices });
+}
+
+// 飛ばした文字・切った長さの知らせ
+function showEncNotice(result){
+  const plain = $('#plainInput').value || '';
+  const parts = [];
+  if(state.key.length === 0 && plain.trim() !== '') parts.push(t('key.empty'));
+  if(result.truncated) parts.push(t('enc.truncated', { max: ZZ.LIMITS.letters }));
+  const skipped = result.missingLetters.length + result.others;
+  if(skipped > 0 && state.key.length > 0){
+    const detail = [];
+    if(result.missingLetters.length > 0){
+      const letters = [...new Set(result.missingLetters)].sort().join(' ');
+      detail.push(t('enc.skippedMissing', { letters }));
+    }
+    if(result.others > 0) detail.push(t('enc.skippedOthers', { count: result.others }));
+    parts.push(t('enc.skipped', { count: skipped, detail: detail.join(t('enc.skippedSep')) }));
+  }
+  showNotice($('#encNotice'), parts.join(' '));
+}
+
 // --- Encrypt viz ---
 function drawEncryptViz(){
   const svg = $('#svgEncrypt');
   clearSVG(svg);
 
   // plot polyline based on current plaintext
-  const plain = $('#plainInput').value || '';
-  const pts = plaintextToPoints(plain, state.key);
-  state.enc.lastPoints = pts; // save
-
-  // Adjust SVG height based on content
-  adjustSVGHeight(svg, pts);
-  const maxY = pts.length > 0 ? Math.max(...pts.map(p => p.y)) : 0;
-  const svgHeight = Math.max(state.viz.height, maxY + 80);
+  const result = encryptCurrent();
+  state.enc.lastPoints = result.points; // save
+  setViewBox(svg, result.viewBox);
 
   // guides (conditionally hidden)
   const rootGroup = elSVG('g', { class: state.enc.guidesHidden ? 'hidden-guides': '' });
   svg.appendChild(rootGroup);
-  drawKeyGuides(rootGroup, state.key, svgHeight);
+  drawKeyGuides(rootGroup, state.key, result.viewBox.height);
 
-  drawPolylineWithPoints(svg, pts);
+  drawPolylineWithPoints(svg, result.points);
+  showEncNotice(result);
+  return result;
 }
 
 // --- Decrypt viz ---
@@ -233,146 +242,48 @@ function drawDecryptViz(){
   const svg = $('#svgDecrypt');
   clearSVG(svg);
 
-  // Adjust SVG height based on content
-  adjustSVGHeight(svg, state.dec.points);
-  const maxY = state.dec.points.length > 0 ? Math.max(...state.dec.points.map(p => p.y)) : 0;
-  const svgHeight = Math.max(state.viz.height, maxY + 80);
+  const vb = ZZ.viewBox(state.key.length, state.dec.points.length);
+  setViewBox(svg, vb);
 
   // draw guides conditionally based on toggle
   if(!state.dec.guidesHidden){
-    drawKeyGuides(svg, state.key, svgHeight);
+    drawKeyGuides(svg, state.key, vb.height);
   }
 
   // overlay existing dec points if any
   if(state.dec.points.length>0){
-    const {poly} = drawPolylineWithPoints(svg, state.dec.points);
-    if(poly) poly.setAttribute('stroke-dasharray','none');
+    drawPolylineWithPoints(svg, state.dec.points);
   }
 }
 
 // --- Export helpers ---
-function copyTextToClipboard(text){
-  navigator.clipboard?.writeText(text).then(()=>{
-    $('#exportMsg').textContent = 'コピーしました。';
-    setTimeout(()=>$('#exportMsg').textContent='', 1400);
-  }).catch(()=>{
-    $('#exportMsg').textContent = 'コピーに失敗しました。';
-    setTimeout(()=>$('#exportMsg').textContent='', 1400);
-  });
+function flashExportMsg(text){
+  $('#exportMsg').textContent = text;
+  setTimeout(()=>$('#exportMsg').textContent='', 1400);
 }
 
-function downloadSVG(svgEl, filename='zigzag.svg'){
-  // Clone the SVG to avoid modifying the original
-  const clonedSVG = svgEl.cloneNode(true);
+function copyTextToClipboard(text){
+  const clip = navigator.clipboard;
+  if(!clip){ flashExportMsg(t('copy.fail')); return; }
+  clip.writeText(text).then(()=>flashExportMsg(t('copy.ok'))).catch(()=>flashExportMsg(t('copy.fail')));
+}
 
-  // Add explicit styles to ensure proper rendering in standalone SVG
-  const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-  styleEl.textContent = `
-    .key-letter { font-size: 18px; fill: #1e293b; opacity: 0.9; }
-    .guide-line { stroke: #cbd5e1; stroke-width: 1.2; stroke-dasharray: 6 6; }
-    .polyline { fill: none; stroke: #0ea5e9; stroke-width: 2.5; }
-    .point { fill: #10b981; stroke: #ffffff; stroke-width: 1; }
-    .point.step { fill: #ffd166; }
-    .hidden-guides .key-letter,
-    .hidden-guides .guide-line { display: none; }
-  `;
-  clonedSVG.insertBefore(styleEl, clonedSVG.firstChild);
-
-  // Ensure all polylines have fill="none" explicitly set
-  const polylines = clonedSVG.querySelectorAll('polyline');
-  polylines.forEach(poly => {
-    poly.setAttribute('fill', 'none');
-  });
-
-  const serializer = new XMLSerializer();
-  const source = serializer.serializeToString(clonedSVG);
+// 単体の SVG を書き出す。鍵を隠しているときは鍵の文字と破線を含めない（折れ線と点だけが暗号文）
+function downloadSVG(){
+  const showKey = !state.enc.guidesHidden;
+  const source = ZZ.svgDocument({ key: state.key, points: state.enc.lastPoints, showKey });
   const blob = new Blob([source], {type:'image/svg+xml;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// --- Parse points input with validation ---
-function parsePointsInput(raw){
-  const pts = [];
-  const errors = [];
-
-  // Input validation
-  if(typeof raw !== 'string') return { pts, errors: ['Invalid input type'] };
-  if(raw.length > 50000) return { pts, errors: ['Input too long (max 50,000 characters)'] };
-
-  const tokens = raw.trim().split(/\s+/);
-
-  if(raw.trim() === '') return { pts, errors };
-
-  tokens.forEach((t, index) => {
-    // Limit number of points to prevent excessive processing
-    if(pts.length >= 1000) {
-      errors.push('座標数が上限を超えています (最大1000点)');
-      return;
-    }
-
-    const m = t.match(/^(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)$/);
-    if(!m) {
-      errors.push(`不正な形式: "${t}" (位置: ${index + 1})`);
-      return;
-    }
-    const x = parseFloat(m[1]);
-    const y = parseFloat(m[3]);
-
-    // Validate numbers are finite
-    if(!isFinite(x) || !isFinite(y)) {
-      errors.push(`無効な数値: "${t}"`);
-      return;
-    }
-
-    // Validate reasonable ranges
-    if(x < 0 || x > 2000 || y < 0 || y > 5000) {
-      errors.push(`範囲外の値: "${t}" (x: 0-2000, y: 0-5000)`);
-      return;
-    }
-
-    pts.push({x,y});
-  });
-
-  return { pts, errors };
+  a.href = url; a.download = t(showKey ? 'svg.fileWithKey' : 'svg.fileNoKey'); a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
 // --- Show/hide error message ---
 function showDecError(errors){
   const errorDiv = $('#decErrorMsg');
-  if(errors.length === 0) {
-    errorDiv.textContent = '';
-    errorDiv.style.display = 'none';
-  } else {
-    errorDiv.textContent = errors.join(' / ');
-    errorDiv.style.display = 'block';
-  }
-}
-
-// --- Map x to nearest key column index ---
-function nearestKeyIndex(x){
-  let bestI = 0, bestD = Infinity;
-  for(let i=0;i<state.key.length;i++){
-    const cx = colX(i);
-    const d = Math.abs(cx - x);
-    if(d < bestD){ bestD = d; bestI = i; }
-  }
-  return bestI;
-}
-
-// --- Decode from points (sorted by y ascending) ---
-function decodeFromPoints(points){
-  if(points.length===0) return '';
-  const sorted = [...points].sort((a,b)=>a.y - b.y);
-  let out = '';
-  for(const p of sorted){
-    const idx = nearestKeyIndex(p.x);
-    const ch = state.key[idx] ?? '';
-    out += ch.toLowerCase(); // Convert to lowercase following classical cipher conventions
-  }
-  return out;
+  const text = errors.map(e => t('dec.' + e.code, e)).join(' / ');
+  showNotice(errorDiv, text);
 }
 
 /* =========================
@@ -380,10 +291,17 @@ function decodeFromPoints(points){
    ========================= */
 
 // --- Theme Management ---
+function readSavedTheme(){
+  try { return localStorage.getItem('zigzag-theme'); } catch(e){ return null; }
+}
+function saveTheme(theme){
+  try { localStorage.setItem('zigzag-theme', theme); } catch(e){ /* 保存できなくても切り替えは効く */ }
+}
+
 function initTheme(){
-  const savedTheme = localStorage.getItem('zigzag-theme');
+  const savedTheme = readSavedTheme();
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+  const theme = (savedTheme === 'dark' || savedTheme === 'light') ? savedTheme : (prefersDark ? 'dark' : 'light');
 
   document.documentElement.setAttribute('data-theme', theme);
   updateThemeIcon(theme);
@@ -392,7 +310,9 @@ function initTheme(){
 function updateThemeIcon(theme){
   const toggle = $('#themeToggle');
   toggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-  toggle.title = theme === 'dark' ? 'ライトモードに切替' : 'ダークモードに切替';
+  const label = theme === 'dark' ? t('theme.toLight') : t('theme.toDark');
+  toggle.title = label;
+  toggle.setAttribute('aria-label', label);
 }
 
 function toggleTheme(){
@@ -400,7 +320,7 @@ function toggleTheme(){
   const newTheme = current === 'dark' ? 'light' : 'dark';
 
   document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('zigzag-theme', newTheme);
+  saveTheme(newTheme);
   updateThemeIcon(newTheme);
 }
 
@@ -411,6 +331,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // 初期キー統計 & プレビュー
   setKey(state.key);
+
+  // 枠の幅が変わったら図を合わせ直す
+  if(typeof ResizeObserver === 'function'){
+    const ro = new ResizeObserver((entries)=>{
+      for(const e of entries){ const svg = e.target.querySelector('.viz'); if(svg) fitSVG(svg); }
+    });
+    $$('.viz-wrap').forEach(w=>ro.observe(w));
+  } else {
+    window.addEventListener('resize', ()=>$$('.viz').forEach(fitSVG));
+  }
 
   // テーマ切替
   $('#themeToggle').addEventListener('click', toggleTheme);
@@ -429,11 +359,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
         // 閉じる
         header.classList.remove('active');
         content.classList.remove('active');
+        header.setAttribute('aria-expanded', 'false');
         icon.textContent = '▶';
       } else {
         // 開く
         header.classList.add('active');
         content.classList.add('active');
+        header.setAttribute('aria-expanded', 'true');
         icon.textContent = '▼';
       }
     });
@@ -441,22 +373,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // 鍵生成
   $('#btnKeyApply').addEventListener('click', ()=>{
-    const k = normalizeKey($('#keyInput').value);
+    const k = ZZ.normalizeKey($('#keyInput').value);
+    $('#keyInput').value = k;
     setKey(k);
   });
   $('#btnKeyShuffle').addEventListener('click', ()=>{
-    const set = normalizeKey($('#keyInput').value || state.key);
-    const arr = set.split('');
-    for(let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
-    }
-    const shuffled = arr.join('');
+    const set = ZZ.normalizeKey($('#keyInput').value || state.key);
+    const shuffled = ZZ.shuffle(set, randomBytes);
     $('#keyInput').value = shuffled;
     setKey(shuffled);
   });
   $('#btnKeyReset').addEventListener('click', ()=>{
-    const def = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const def = ZZ.ALPHABET;
     $('#keyInput').value = def;
     setKey(def);
   });
@@ -471,7 +399,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   $('#btnEncClear').addEventListener('click', ()=>{
     $('#plainInput').value = '';
     $('#encryptedPoints').value = '';
-    state.enc.guidesHidden = false;
     state.enc.selectedIndices.clear(); // Clear cached positions
     clearInterval(state.enc.timer);
     state.enc.timer = null;
@@ -479,47 +406,44 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 
   $('#btnEncrypt').addEventListener('click', ()=>{
-    // Just display the encrypted points without hiding guides
-    if(state.enc.lastPoints.length > 0) {
-      const ptsStr = state.enc.lastPoints.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
-      $('#encryptedPoints').value = ptsStr;
-    } else {
-      $('#encryptedPoints').value = '';
-    }
+    // 今の平文で点を作り直してから出す（リアルタイム描画が OFF でも古い点を出さない）
+    clearInterval(state.enc.timer); state.enc.timer = null;
+    const result = drawEncryptViz();
+    $('#encryptedPoints').value = ZZ.pointsToText(result.points);
   });
 
   // Toggle key visibility in encryption tab
   $('#chkShowKeyEnc').addEventListener('change', ()=>{
     state.enc.guidesHidden = !$('#chkShowKeyEnc').checked;
+    clearInterval(state.enc.timer); state.enc.timer = null;
     drawEncryptViz();
   });
 
   $('#btnExportPoints').addEventListener('click', ()=>{
-    const ptsStr = state.enc.lastPoints.map(p=>`${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
+    const ptsStr = ZZ.pointsToText(state.enc.lastPoints);
     if(ptsStr.length===0){
-      $('#exportMsg').textContent = '出力できる折れ線がありません。';
-      setTimeout(()=>$('#exportMsg').textContent='', 1400);
+      flashExportMsg(t('copy.empty'));
       return;
     }
     copyTextToClipboard(ptsStr);
   });
 
   $('#btnDownloadSVG').addEventListener('click', ()=>{
-    const svg = $('#svgEncrypt');
-    downloadSVG(svg, 'zigzag-cipher.svg');
+    downloadSVG();
   });
 
   // 復号
   // Toggle key visibility in decryption tab
   $('#chkShowKeyDec').addEventListener('change', ()=>{
     state.dec.guidesHidden = !$('#chkShowKeyDec').checked;
+    clearInterval(state.dec.timer); state.dec.timer = null;
     drawDecryptViz();
   });
 
   // Real-time point plotting
   $('#pointsInput').addEventListener('input', ()=>{
     const raw = $('#pointsInput').value || '';
-    const { pts, errors } = parsePointsInput(raw);
+    const { pts, errors } = ZZ.parsePoints(raw);
     showDecError(errors);
 
     if(errors.length === 0) {
@@ -540,16 +464,24 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // Decode button - immediately decode without animation
   $('#btnDecode').addEventListener('click', ()=>{
+    clearInterval(state.dec.timer); state.dec.timer=null;
     const raw = $('#pointsInput').value || '';
-    const { pts, errors } = parsePointsInput(raw);
+    const { pts, errors } = ZZ.parsePoints(raw);
 
     if(errors.length > 0) {
       showDecError(errors);
       return;
     }
+    if(pts.length > 0 && state.key.length === 0) {
+      showDecError([{ code: 'emptyKey' }]);
+      return;
+    }
+    showDecError([]);
 
     if(pts.length === 0) {
+      state.dec.points = [];
       $('#decodedOutput').value = '';
+      drawDecryptViz();
       return;
     }
 
@@ -557,98 +489,57 @@ document.addEventListener('DOMContentLoaded', ()=>{
     drawDecryptViz();
 
     // Decode immediately
-    const decoded = decodeFromPoints(pts);
-    $('#decodedOutput').value = decoded;
+    $('#decodedOutput').value = ZZ.decrypt(pts, state.key).text;
   });
 
-  // Sync from encryption tab
+  // Sync from encryption tab（今の平文で点を作り直してから渡す）
   $('#btnSyncFromEnc').addEventListener('click', ()=>{
-    if(state.enc.lastPoints.length === 0) {
-      showDecError(['暗号化タブに暗号文がありません']);
+    clearInterval(state.enc.timer); state.enc.timer = null;
+    clearInterval(state.dec.timer); state.dec.timer = null;
+    const result = drawEncryptViz();
+    if(result.points.length === 0) {
+      showDecError([{ code: 'noSource' }]);
       setTimeout(() => showDecError([]), 2000);
       return;
     }
 
     // Convert points to string format
-    const ptsStr = state.enc.lastPoints.map(p => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
-    $('#pointsInput').value = ptsStr;
+    $('#pointsInput').value = ZZ.pointsToText(result.points);
+    $('#encryptedPoints').value = $('#pointsInput').value;
 
     // Clear any errors and update visualization
     showDecError([]);
-    state.dec.points = [...state.enc.lastPoints];
+    state.dec.points = result.points.map(p => ({ x: p.x, y: p.y }));
+    $('#decodedOutput').value = '';
     drawDecryptViz();
   });
 
-  // Encryption step playback
+  // Encryption step playback（通常描画と同じ点を1つずつ見せる）
   $('#btnEncStepPlay').addEventListener('click', ()=>{
     if(state.enc.timer) return; // already running
-    const plain = $('#plainInput').value || '';
-    if(!plain) return;
+    const result = drawEncryptViz();
+    const pts = result.points;
+    if(pts.length === 0) return;
 
-    // Reset and start fresh animation
-    state.enc.stepIndex = 0;
-    const P = plain.toUpperCase();
-    const validChars = [];
-
-    // Collect valid characters
-    for(const ch of P){
-      if(/[A-Z]/.test(ch) && state.key.indexOf(ch) !== -1){
-        validChars.push(ch);
-      }
-    }
-
-    if(validChars.length === 0) return;
-
-    // Clear current visualization
     const svg = $('#svgEncrypt');
-    clearSVG(svg);
+    const drawUpTo = (count) => {
+      clearSVG(svg);
+      const rootGroup = elSVG('g', { class: state.enc.guidesHidden ? 'hidden-guides': '' });
+      svg.appendChild(rootGroup);
+      drawKeyGuides(rootGroup, state.key, result.viewBox.height);
+      drawPolylineWithPoints(svg, pts.slice(0, count));
+      if(count > 0){ drawStepMarker(svg, pts[count - 1]); revealPoint(svg, pts[count - 1]); }
+    };
 
-    // Draw guides
-    const rootGroup = elSVG('g', { class: state.enc.guidesHidden ? 'hidden-guides': '' });
-    svg.appendChild(rootGroup);
-    const maxY = validChars.length * state.viz.rowGap + state.viz.guideTopY;
-    const svgHeight = Math.max(state.viz.height, maxY + 80);
-    adjustSVGHeight(svg, [{x:0, y:maxY}]);
-    drawKeyGuides(rootGroup, state.key, svgHeight);
-
-    // Animate step by step
-    const animPts = [];
+    state.enc.stepIndex = 0;
+    drawUpTo(0);
     state.enc.timer = setInterval(()=>{
-      if(state.enc.stepIndex >= validChars.length){
+      state.enc.stepIndex++;
+      drawUpTo(state.enc.stepIndex);
+      if(state.enc.stepIndex >= pts.length){
         clearInterval(state.enc.timer);
         state.enc.timer = null;
-        return;
       }
-
-      // Get next point
-      const ch = validChars[state.enc.stepIndex];
-      const indices = findAllIndices(state.key, ch);
-      const cacheKey = `${P.indexOf(ch)}_${ch}`;
-      let idx;
-
-      if(state.enc.selectedIndices.has(cacheKey)){
-        idx = state.enc.selectedIndices.get(cacheKey);
-      } else {
-        idx = indices[Math.floor(Math.random() * indices.length)];
-        state.enc.selectedIndices.set(cacheKey, idx);
-      }
-
-      const x = colX(idx);
-      const y = rowY(state.enc.stepIndex);
-      animPts.push({x, y});
-
-      // Redraw with current points
-      clearSVG(svg);
-      const rootGroup2 = elSVG('g', { class: state.enc.guidesHidden ? 'hidden-guides': '' });
-      svg.appendChild(rootGroup2);
-      drawKeyGuides(rootGroup2, state.key, svgHeight);
-      drawPolylineWithPoints(svg, animPts);
-
-      // Highlight current point
-      const circ = elSVG('circle', { cx:x, cy:y, r:5.2, class:'point step' });
-      svg.appendChild(circ);
-
-      state.enc.stepIndex++;
     }, 300);
   });
 
@@ -662,70 +553,47 @@ document.addEventListener('DOMContentLoaded', ()=>{
   $('#btnDecStepPlay').addEventListener('click', ()=>{
     if(state.dec.timer) return; // already running
     const raw = $('#pointsInput').value || '';
-    const { pts, errors } = parsePointsInput(raw);
+    const { pts, errors } = ZZ.parsePoints(raw);
 
     if(errors.length > 0) {
       showDecError(errors);
       return;
     }
-
     if(pts.length === 0) return;
+    if(state.key.length === 0) {
+      showDecError([{ code: 'emptyKey' }]);
+      return;
+    }
+    showDecError([]);
 
     // Sort points by Y coordinate for proper decryption order
-    const sortedPts = [...pts].sort((a,b) => a.y - b.y);
-    state.dec.points = sortedPts;
+    const decoded = ZZ.decrypt(pts, state.key);
+    const sortedPts = decoded.sorted;
+    state.dec.points = sortedPts.map(p => ({ x: p.x, y: p.y }));
 
-    // Clear current visualization and prepare for animation
     const svg = $('#svgDecrypt');
-    clearSVG(svg);
-
-    // Draw guides if enabled
-    const maxY = sortedPts.length > 0 ? Math.max(...sortedPts.map(p => p.y)) : 0;
-    const svgHeight = Math.max(state.viz.height, maxY + 80);
-    adjustSVGHeight(svg, sortedPts);
-
-    if(!state.dec.guidesHidden){
-      drawKeyGuides(svg, state.key, svgHeight);
-    }
+    const vb = ZZ.viewBox(state.key.length, sortedPts.length);
+    const drawUpTo = (count) => {
+      clearSVG(svg);
+      setViewBox(svg, vb);
+      if(!state.dec.guidesHidden) drawKeyGuides(svg, state.key, vb.height);
+      drawPolylineWithPoints(svg, sortedPts.slice(0, count));
+      if(count > 0){ drawStepMarker(svg, sortedPts[count - 1]); revealPoint(svg, sortedPts[count - 1]); }
+      $('#decodedOutput').value = decoded.text.slice(0, count);
+    };
 
     // Reset animation state
     state.dec.stepIndex = 0;
-    $('#decodedOutput').value = '';
+    drawUpTo(0);
 
     // Animate step by step
-    const animPts = [];
     state.dec.timer = setInterval(()=>{
+      state.dec.stepIndex++;
+      drawUpTo(state.dec.stepIndex);
       if(state.dec.stepIndex >= sortedPts.length){
         clearInterval(state.dec.timer);
         state.dec.timer = null;
-        return;
       }
-
-      const p = sortedPts[state.dec.stepIndex];
-      animPts.push(p);
-
-      // Redraw with current points
-      clearSVG(svg);
-      if(!state.dec.guidesHidden){
-        drawKeyGuides(svg, state.key, svgHeight);
-      }
-
-      // Draw partial polyline up to current point
-      if(animPts.length > 0){
-        const {poly} = drawPolylineWithPoints(svg, animPts);
-        if(poly) poly.setAttribute('stroke-dasharray','none');
-      }
-
-      // Highlight current point
-      const circ = elSVG('circle', { cx:p.x, cy:p.y, r:5.2, class:'point step' });
-      svg.appendChild(circ);
-
-      // Map to nearest column and decode
-      const idx = nearestKeyIndex(p.x);
-      const ch = state.key[idx] ?? '';
-      $('#decodedOutput').value += ch.toLowerCase();
-
-      state.dec.stepIndex++;
     }, 300);
   });
 

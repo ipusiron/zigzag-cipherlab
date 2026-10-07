@@ -11,21 +11,32 @@
   --card:#0f1520;
   --btn:#1a2230;
   --btn-h:#222c3d;
+  --on-primary:#07121e;
+  --low:#10b981;
+  --medium:#f59e0b;
+  --high:#ff6b6b;
+  --accent-text:#5fb3ff;
+  --viz-max:560px;  /* 図の枠の高さの上限（狭い画面では media で下げる） */
 }
 
 [data-theme="light"]{
   --bg:#f8fafc;
   --panel:#ffffff;
-  --muted:#64748b;
+  --muted:#475569;
   --text:#1e293b;
   --accent:#0ea5e9;
   --accent-2:#10b981;
-  --danger:#ef4444;
+  --danger:#b91c1c;
   --line:#e2e8f0;
   --dash:#cbd5e1;
   --card:#f1f5f9;
   --btn:#f8fafc;
   --btn-h:#e2e8f0;
+  --on-primary:#051323;
+  --low:#047857;
+  --medium:#92400e;
+  --high:#b91c1c;
+  --accent-text:#0369a1;
 }
 
 *{box-sizing:border-box}
@@ -42,7 +53,7 @@ body{
   background:linear-gradient(180deg,#f8fafc 0%, #f1f5f9 100%);
 }
 
-a{color:var(--accent)}
+a{color:var(--accent-text)}
 .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 .small{font-size:12px}
 
@@ -53,10 +64,19 @@ a{color:var(--accent)}
   margin:0 auto;
 }
 .header-content{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:start;
   gap:20px;
+}
+.header-title{
+  grid-column:2;
+  text-align:center;
+  min-width:0;
+}
+.header-content .theme-toggle{
+  grid-column:3;
+  justify-self:end;
 }
 .app-header h1{
   margin:0 0 8px;
@@ -67,6 +87,7 @@ a{color:var(--accent)}
 
 .theme-toggle{
   background:var(--btn);
+  color:var(--text);
   border:1px solid var(--line);
   border-radius:8px;
   width:40px;
@@ -86,9 +107,14 @@ a{color:var(--accent)}
 
 @media (max-width: 768px){
   .header-content{
-    flex-direction:column;
-    align-items:center;
+    grid-template-columns:1fr;
+    justify-items:center;
     text-align:center;
+  }
+  .header-title,
+  .header-content .theme-toggle{
+    grid-column:auto;
+    justify-self:center;
   }
 
   /* モバイル向けフォントサイズ調整 */
@@ -126,9 +152,8 @@ a{color:var(--accent)}
   }
 
   /* ビジュアライザーの高さ調整 */
-  .viz{
-    height:400px;
-    min-height:300px;
+  :root{
+    --viz-max:480px;
   }
 }
 
@@ -151,7 +176,7 @@ a{color:var(--accent)}
 }
 .tab.active{
   background:var(--accent);
-  color:#07121e;
+  color:var(--on-primary);
   border-color:transparent;
   font-weight:600;
 }
@@ -225,16 +250,14 @@ a{color:var(--accent)}
     text-align:center;
   }
 
-  /* テキストエリア */
+  /* テキストエリア（文字は16pxのまま。iOSが勝手に拡大しない） */
   .textarea{
-    font-size:14px;
     border-radius:8px;
   }
 
   /* ビジュアライザー */
-  .viz{
-    height:300px;
-    min-height:250px;
+  :root{
+    --viz-max:420px;
   }
   .viz-header{
     padding:8px 12px;
@@ -293,9 +316,8 @@ a{color:var(--accent)}
     font-size:13px;
     min-width:100px;
   }
-  .viz{
-    height:250px;
-    min-height:200px;
+  :root{
+    --viz-max:340px;
   }
 }
 
@@ -312,9 +334,8 @@ a{color:var(--accent)}
     font-size:13px;
     margin:0 0 6px;
   }
-  .viz{
-    height:250px;
-    min-height:200px;
+  :root{
+    --viz-max:340px;
   }
 }
 
@@ -329,6 +350,7 @@ a{color:var(--accent)}
 .label{display:block; margin-bottom:6px; color:var(--muted)}
 .textarea{
   width:100%;
+  font-size:16px;
   background:var(--card);
   color:var(--text);
   border:1px solid var(--line);
@@ -375,14 +397,20 @@ a{color:var(--accent)}
 .toggle{display:flex; align-items:center; gap:8px; margin:10px 0 2px}
 .button-row{display:flex; gap:8px; margin:10px 0}
 .export-row{display:flex; gap:8px; align-items:center; margin:10px 0}
-.msg{color:var(--accent-2)}
+.msg{color:var(--low)}
 .error-msg{
   color:var(--danger);
   font-size:13px;
   margin-top:6px;
-  display:none;
   line-height:1.4;
 }
+.notice{
+  color:var(--muted);
+  font-size:13px;
+  margin:6px 0 0;
+  line-height:1.4;
+}
+[hidden]{display:none !important}
 
 .btn{
   background:var(--btn);
@@ -393,7 +421,7 @@ a{color:var(--accent)}
   cursor:pointer;
 }
 .btn:hover{background:var(--btn-h)}
-.btn.primary{background:var(--accent); color:#051323; border-color:transparent}
+.btn.primary{background:var(--accent); color:var(--on-primary); border-color:transparent}
 .btn.ghost{background:transparent}
 .btn.danger{
   background:rgba(255,107,107,0.1);
@@ -453,15 +481,17 @@ a{color:var(--accent)}
   font-size:12px;
 }
 .btn-small:hover{background:var(--btn-h)}
-.viz{
-  width:100%;
-  height:520px;
-  display:block;
-  background: radial-gradient(1200px 520px at 50% 0%, rgba(65,85,120,0.09), rgba(0,0,0,0) 60%);
+/* 図は自然な大きさで描き、枠の中だけをスクロールする（縮めて押し込まない） */
+.viz-wrap{
+  max-height:var(--viz-max);
   overflow:auto;
+  background: radial-gradient(1200px 520px at 50% 0%, rgba(65,85,120,0.09), rgba(0,0,0,0) 60%);
+}
+.viz{
+  display:block;
 }
 
-[data-theme="light"] .viz{
+[data-theme="light"] .viz-wrap{
   background: radial-gradient(1200px 520px at 50% 0%, rgba(59,130,246,0.05), rgba(255,255,255,0) 60%);
 }
 
@@ -544,22 +574,22 @@ a{color:var(--accent)}
 }
 
 .highlight-row td:first-child{
-  color:var(--accent);
+  color:var(--accent-text);
 }
 
 /* 解読難易度の色分け */
 .difficulty-low{
-  color:#10b981;
+  color:var(--low);
   font-weight:600;
 }
 
 .difficulty-medium{
-  color:#f59e0b;
+  color:var(--medium);
   font-weight:600;
 }
 
 .difficulty-high{
-  color:#ef4444;
+  color:var(--high);
   font-weight:600;
 }
 
@@ -576,9 +606,14 @@ a{color:var(--accent)}
   background:var(--card);
 }
 
+.accordion-title{
+  margin:0;
+}
 .accordion-header{
   width:100%;
   background:var(--btn);
+  color:var(--text);
+  font:inherit;
   border:none;
   padding:16px 20px;
   text-align:left;
@@ -595,11 +630,10 @@ a{color:var(--accent)}
 
 .accordion-header.active{
   background:var(--accent);
-  color:#051323;
+  color:var(--on-primary);
 }
 
-.accordion-header h2{
-  margin:0;
+.accordion-label{
   font-size:18px;
   font-weight:600;
   color:inherit;
@@ -613,28 +647,34 @@ a{color:var(--accent)}
 
 .accordion-header.active .accordion-icon{
   transform:rotate(0deg);
-  color:#051323;
+  color:var(--on-primary);
 }
 
+/* 中身の高さに上限を置かない（grid の行の 0fr→1fr で開閉する） */
 .accordion-content{
-  max-height:0;
-  overflow:hidden;
-  transition:max-height 0.4s ease;
+  display:grid;
+  grid-template-rows:0fr;
+  transition:grid-template-rows 0.4s ease;
   background:var(--panel);
 }
 
 .accordion-content.active{
-  max-height:2000px; /* 十分大きな値 */
+  grid-template-rows:1fr;
 }
 
-.accordion-content > *{
+.accordion-inner{
+  overflow:hidden;
+  min-height:0;
+}
+
+.accordion-inner > *{
   padding:0 20px 20px;
   margin:0;
 }
 
-.accordion-content p:first-child,
-.accordion-content ul:first-child,
-.accordion-content .table-container:first-child{
+.accordion-inner p:first-child,
+.accordion-inner ul:first-child,
+.accordion-inner .table-container:first-child{
   padding-top:20px;
 }
 
@@ -717,7 +757,7 @@ a{color:var(--accent)}
 
 [data-theme="light"] .accordion-header.active{
   background:var(--accent);
-  color:#051323;
+  color:var(--on-primary);
 }
 
 [data-theme="light"] .accordion-content{
@@ -745,17 +785,17 @@ a{color:var(--accent)}
     padding:12px 16px;
   }
 
-  .accordion-header h2{
+  .accordion-label{
     font-size:16px;
   }
 
-  .accordion-content > *{
+  .accordion-inner > *{
     padding:0 16px 16px;
   }
 
-  .accordion-content p:first-child,
-  .accordion-content ul:first-child,
-  .accordion-content .table-container:first-child{
+  .accordion-inner p:first-child,
+  .accordion-inner ul:first-child,
+  .accordion-inner .table-container:first-child{
     padding-top:16px;
   }
 
@@ -791,17 +831,17 @@ a{color:var(--accent)}
     padding:10px 12px;
   }
 
-  .accordion-header h2{
+  .accordion-label{
     font-size:15px;
   }
 
-  .accordion-content > *{
+  .accordion-inner > *{
     padding:0 12px 12px;
   }
 
-  .accordion-content p:first-child,
-  .accordion-content ul:first-child,
-  .accordion-content .table-container:first-child{
+  .accordion-inner p:first-child,
+  .accordion-inner ul:first-child,
+  .accordion-inner .table-container:first-child{
     padding-top:12px;
   }
 }
@@ -813,3 +853,23 @@ a{color:var(--accent)}
   text-align:center;
 }
 .footer{max-width:1200px; margin:0 auto}
+
+.noscript{
+  max-width:1200px;
+  margin:12px auto;
+  padding:0 16px;
+  color:var(--danger);
+}
+
+:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* 動きを減らす設定を尊重する */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    transition:none !important;
+    animation:none !important;
+  }
+}
