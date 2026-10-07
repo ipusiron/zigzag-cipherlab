@@ -18,13 +18,14 @@ Note: in English, "zigzag cipher" usually means the rail fence cipher (a transpo
 
 ## File Structure
 
-- `index.html` - Single page with 5 tabs (鍵生成/Key, 暗号化/Encrypt, 復号/Decrypt, 解析/Analyze, 座学/Learn). Loads `js/zz-core.js`, `js/messages.js`, `js/i18n.js`, `script.js` in that order. Every visible string carries `data-i18n` (textContent) or `data-i18n-attr` (attributes such as aria-label and placeholder)
+- `index.html` - Single page with 6 tabs (鍵生成/Key, 暗号化/Encrypt, 復号/Decrypt, 解析/Analyze, 練習/Practice, 座学/Learn). Loads `js/zz-core.js`, `js/zz-practice.js`, `js/messages.js`, `js/i18n.js`, `script.js` in that order. Every visible string carries `data-i18n` (textContent) or `data-i18n-attr` (attributes such as aria-label and placeholder)
 - `js/zz-core.js` - Pure computation (`globalThis.ZZCore`, no DOM): key normalization/stats, point coordinates, plaintext preparation, column choice (RNG injected; `makeChooser('random'|'cycle'|'first')`), points text parse/format, nearest column, decrypt, shuffle, column counts/sequence/letters, Frequency Analyzer URL, share link (`#points=`), reading points from a hash or an SVG text, standalone SVG document
+- `js/zz-practice.js` - Practice core (`globalThis.ZZPractice`, depends on ZZCore): `makeQuiz(mode, seed)` (mode `read` or `guess`, seed 1..999999, xorshift32 like Day049), public-domain `SHORT_TEXTS`/`LONG_TEXTS`, `checkAnswer`, `frequencyHint`, `revealHint`
 - `js/messages.js` - UI strings (`globalThis.ZZMessages`, `t(key, vars)`, `setLanguage`, `getLanguage`). `ja` and `en` have the same keys. `script.js` must not contain Japanese string literals
 - `js/i18n.js` - `globalThis.ZZI18n`: initial language (`?lang=` → saved → browser), `applyStaticText(document)`, save/read of the choice (key `zigzag-cipherlab-lang`)
 - `script.js` - DOM handling only (drawing, events, theme, language switch, tab keyboard navigation, SVG fitting and follow-scroll, PNG export via canvas, share link, SVG file loading, Analyze tab)
 - `style.css` - Dark theme by default, light theme via `[data-theme="light"]`, CSS variables (`--low/--medium/--high/--accent-text/--on-primary`, `--viz-max`), responsive media queries
-- `test/` - `core.test.js`, `html.test.js`, `contrast.test.js`, `format.test.js`, `i18n.test.js`, `readme.test.js` (+ `load.js` helper that runs the plain scripts with `vm.runInThisContext`)
+- `test/` - `core.test.js`, `practice.test.js`, `html.test.js`, `contrast.test.js`, `format.test.js`, `i18n.test.js`, `readme.test.js` (+ `load.js` helper that runs the plain scripts with `vm.runInThisContext`)
 - `README.md` (Japanese, with the YAML front matter used by hackinglab.online) and `README.en.md` (English, same headings in the same order). Screenshots in `assets/` (Japanese) and `assets/en/` (English)
 
 ## Key Behaviours
@@ -36,6 +37,7 @@ Note: in English, "zigzag cipher" usually means the rail fence cipher (a transpo
 - Decrypt: sort by y (stable), nearest column by x (ties go to the lower index), lowercase output
 - Analyze tab: `columnSequence` (column numbers in y order), `columnLetters` (A=0 … Z=25, null for keys longer than 26), bar charts of letter counts vs column counts, link to Frequency Analyzer with `#text=` (mapped text only, never the key)
 - Exports without the key: `ZZCore.svgDocument` with `showKey:false` contains only the polyline and points; the PNG is rendered from that SVG as a `data:` URL image on a white canvas (capped at 16,000 px per side / 1e8 px area); the share link is `<page>#points=<encoded points>` and is read on load (`readPointsFromHash`) then removed with `history.replaceState`; "Load from SVG" reads the first `<polyline points="…">` with `pointsFromSvgText`
+- Practice tab: `state.prac` holds the current quiz, whether it was solved (or revealed), score and total. The key is drawn only in `read` mode or after hint 3 / "Show answer". Problems are deterministic per number so classes can share them
 - Figure rendering: natural size (1 unit = 1px) scaled down to the box width but not below 0.55; the `.viz-wrap` box scrolls and follows the current point during step playback
 - Tabs: WAI-ARIA tabs (role, aria-selected, aria-controls, arrow keys). Switching tabs stops running step timers; activating the Analyze tab recomputes it
 - Language switch re-applies static text, the theme button label, notices (via `setKey`) and the Analyze chart titles
