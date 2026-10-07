@@ -191,15 +191,16 @@
               <div class="accordion-inner">
                 <p>
                   ジグザグ暗号（Zigzag Cipher）は、文字列ではなく<strong>点と線（折れ線）</strong>を暗号文とする
-                  <strong>幾何学サイファ</strong>の一種です。<br>
-                  鍵（アルファベット配列の紙）に沿って平文文字の位置に点を打ち、隣接点を結んでいくことで、
+                  幾何学サイファの一種です。<br>
+                  鍵（アルファベットを一列に並べた紙）に沿って平文の各文字の位置に点を打ち、隣り合う点を結んでいくと、
                   折れ線が得られます。鍵を外すと、第三者には単なるジグザグ線にしか見えません。
                 </p>
                 <ul>
-                  <li>分類：江戸川乱歩「暗号記法の種類」における <em>線代用法</em></li>
-                  <li>起源：チャールズ1世の発明説がある一方、古代ギリシアのアイネイアスにも類似の着想が見られ、起源は確定的でない</li>
-                  <li>鍵の自由度：配列は任意（順列・不規則・欠落・重複すべて可）</li>
+                  <li>分類：江戸川乱歩「暗号記法の種類」でいう<em>線代用法</em>（文字の代わりに線で表す方法）に当たるとされる</li>
+                  <li>起源：古代ギリシアのアイネイアス（紀元前4世紀）は『攻城論』第31章で、24の穴をあけた骰子に糸を通し、文字の穴を順にたどって伝える方法を記している。糸が文字の位置を順に結ぶ点は、この暗号と同じ発想。チャールズ1世の考案とする説も伝えられる</li>
+                  <li>鍵の自由度：配列は任意（順列・不規則・欠落・重複すべて可）。ただし既定のABC…Zの並びのままでは、列の位置がそのまま文字を表すので秘密にならない</li>
                   <li>縦配置・横配置は本質的に同じ</li>
+                  <li>英語で「zigzag cipher」というと、レールフェンス暗号（転置式）の別名を指すことが多い。本ツールの方式は転置ではなく換字の一種で、別の暗号</li>
                 </ul>
               </div>
             </div>
@@ -230,11 +231,11 @@
                     <tbody>
                       <tr class="highlight-row">
                         <td><strong>ジグザグ暗号</strong></td>
-                        <td>線代用法</td>
+                        <td>線代用法（換字の一種）</td>
                         <td>折れ線・座標</td>
                         <td>アルファベット配列</td>
                         <td class="difficulty-medium">中</td>
-                        <td>視覚的暗号、重複鍵対応</td>
+                        <td>折れ線が暗号文。重複鍵で同音換字</td>
                       </tr>
                       <tr>
                         <td>シーザー暗号</td>
@@ -262,7 +263,7 @@
                       </tr>
                       <tr>
                         <td>プレイフェア暗号</td>
-                        <td>多表式</td>
+                        <td>多字換字式（2文字単位）</td>
                         <td>アルファベット</td>
                         <td>5×5格子</td>
                         <td class="difficulty-high">高</td>
@@ -270,7 +271,7 @@
                       </tr>
                       <tr>
                         <td>四方暗号</td>
-                        <td>多表式</td>
+                        <td>多字換字式（2文字単位）</td>
                         <td>アルファベット</td>
                         <td>4つの5×5格子</td>
                         <td class="difficulty-high">高</td>
@@ -285,12 +286,12 @@
                         <td>ジグザグ配置での転置</td>
                       </tr>
                       <tr>
-                        <td>棚暗号</td>
+                        <td>縦列転置式暗号</td>
                         <td>転置式</td>
                         <td>アルファベット</td>
                         <td>列順序</td>
                         <td class="difficulty-medium">中</td>
-                        <td>矩形配置での転置</td>
+                        <td>矩形に書いて列の順で読む転置</td>
                       </tr>
                     </tbody>
                   </table>
@@ -303,16 +304,17 @@
           <div class="accordion-item">
             <h2 class="accordion-title">
               <button class="accordion-header" type="button" data-target="about-uniqueness" aria-expanded="false" aria-controls="about-uniqueness">
-                <span class="accordion-label">ジグザグ暗号の独自性</span>
+                <span class="accordion-label">ジグザグ暗号の性質</span>
                 <span class="accordion-icon" aria-hidden="true">▶</span>
               </button>
             </h2>
             <div class="accordion-content" id="about-uniqueness">
               <div class="accordion-inner">
                 <ul>
-                  <li><strong>唯一の「図形暗号」</strong>として、文字ではなく座標・線分が暗号文</li>
-                  <li><strong>視覚的暗号</strong>として、数学的解読よりも幾何学的復元が必要</li>
-                  <li><strong>重複鍵</strong>により、単一換字と多表式の特性を併せ持つ</li>
+                  <li>文字ではなく図形（折れ線・座標）を暗号文とする方式のひとつ。踊る人形暗号やピッグペン暗号のように文字を記号に置き換える方式と違い、線のつながりそのものが情報を持つ</li>
+                  <li>重複のない鍵なら、折れ線の各点がどの列にあるかの並び（列番号の列）は<strong>単一換字式暗号の暗号文そのもの</strong>。同じ文字は同じ列に来るので、頻度分析がそのまま効く</li>
+                  <li>鍵に同じ文字を複数置くと、その文字は複数の列のどれかに散る＝同音換字（ホモフォニック）。頻度をならして解読を難しくする古典的な工夫で、表が周期で変わる多表式とは別の仕組み</li>
+                  <li>鍵（文字の並び）が秘密であることが前提。鍵の文字と破線を隠した折れ線だけを渡せば暗号文になる（「SVGをダウンロード」は、鍵を隠しているときは鍵を含めない）</li>
                 </ul>
               </div>
             </div>
@@ -324,7 +326,7 @@
 
   <footer class="app-footer">
     <div class="footer">
-      🔗 GitHubリポジトリはこちら（
+      🔗 GitHubリポジトリーはこちら（
       <a href="https://github.com/ipusiron/zigzag-cipherlab" target="_blank" rel="noopener noreferrer">ipusiron/zigzag-cipherlab</a> ）
     </div>
   </footer>
