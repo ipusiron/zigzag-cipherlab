@@ -1,0 +1,111 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { read } from './load.js';
+
+const html = read('index.html');
+
+test('CSP の meta があり、meta では効かない指定と unsafe-inline を書かない', () => {
+  const csp = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/);
+  assert.ok(csp, 'CSP の meta がない');
+  assert.match(csp[1], /default-src 'self'/);
+  assert.match(csp[1], /script-src 'self'/);
+  assert.match(csp[1], /style-src 'self'/);
+  assert.match(csp[1], /base-uri 'none'/);
+  assert.match(csp[1], /form-action 'none'/);
+  assert.match(csp[1], /connect-src 'none'/);
+  assert.match(csp[1], /object-src 'none'/);
+  assert.doesNotMatch(csp[1], /frame-ancestors/); // meta では効かない
+  assert.doesNotMatch(csp[1], /unsafe-inline|unsafe-eval/);
+  for (const name of ['X-Frame-Options', 'X-Content-Type-Options', 'X-XSS-Protection']) {
+    assert.equal(html.includes(name), false, `${name} は meta では効かない`);
+  }
+});
+
+test('referrer の meta と favicon の指定がある', () => {
+  assert.match(html, /<meta name="referrer" content="no-referrer"/);
+  assert.match(html, /<link rel="icon" href="data:,"/);
+});
+
+test('インラインのイベントハンドラーと style 属性がない', () => {
+  assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
+  assert.doesNotMatch(html, /\sstyle\s*=\s*"/i);
+  assert.doesNotMatch(html, /javascript:/i);
+});
+
+test('スクリプトは計算部・文言・画面の順に読み込む', () => {
+  const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  assert.deepEqual(srcs, ['js/zz-core.js', 'js/messages.js', 'script.js']);
+});
+
+test('主要な要素の id がそろっている', () => {
+  const ids = [
+    'themeToggle', 'keyInput', 'btnKeyApply', 'btnKeyShuffle', 'btnKeyReset', 'statLen', 'statDup', 'statMiss', 'keyNotice', 'svgKeyPreview',
+    'plainInput', 'encNotice', 'chkRealtime', 'chkShowKeyEnc', 'btnEncrypt', 'encryptedPoints', 'btnExportPoints', 'btnDownloadSVG', 'exportMsg',
+    'btnEncClear', 'btnEncStepPlay', 'btnEncStepStop', 'svgEncrypt',
+    'pointsInput', 'decErrorMsg', 'chkShowKeyDec', 'btnSyncFromEnc', 'btnDecode', 'decodedOutput', 'btnDecClear', 'btnDecStepPlay', 'btnDecStepStop',
+    'svgDecrypt', 'about-basic', 'about-comparison', 'about-uniqueness',
+  ];
+  for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
+});
+
+test('タブとパネルが id で結ばれている（role・aria-controls・aria-labelledby）', () => {
+  const re = new RegExp('<button class="tab[^"]*" id="tab-btn-(\\w+)" type="button" role="tab" '
+    + 'data-tab="tab-(\\w+)"[^>]*aria-controls="tab-(\\w+)"', 'g');
+  const tabs = [...html.matchAll(re)];
+  assert.equal(tabs.length, 4);
+  for (const [, btnKey, dataKey, panelKey] of tabs) {
+    assert.equal(btnKey, dataKey);
+    assert.equal(btnKey, panelKey);
+    assert.ok(
+      new RegExp(`<section id="tab-${panelKey}"[^>]*role="tabpanel"[^>]*aria-labelledby="tab-btn-${panelKey}"`).test(html),
+      `tab-${panelKey} のパネルに aria-labelledby がない`,
+    );
+  }
+  assert.match(html, /<nav class="tabs" role="tablist" aria-label="[^"]+">/);
+});
+
+test('アコーディオンは見出しの中のボタン（button の中に h2 を入れない）で、aria-expanded と aria-controls がある', () => {
+  assert.doesNotMatch(html, /<button[^>]*>\s*<h2/);
+  const re = new RegExp('<h2 class="accordion-title">\\s*<button class="accordion-header[^"]*" type="button" '
+    + 'data-target="([\\w-]+)" aria-expanded="(true|false)" aria-controls="([\\w-]+)">', 'g');
+  const headers = [...html.matchAll(re)];
+  assert.equal(headers.length, 3);
+  for (const [, target, , controls] of headers) {
+    assert.equal(target, controls);
+    assert.ok(html.includes(`<div class="accordion-content${target === 'about-basic' ? ' active' : ''}" id="${target}">`), target);
+  }
+  assert.equal((html.match(/class="accordion-inner"/g) || []).length, 3);
+});
+
+test('図は viz-wrap の中にあり、読み上げ用の名前がある', () => {
+  const re = new RegExp('<div class="viz-wrap">\\s*<svg id="(\\w+)" class="viz" viewBox="0 0 1200 600" '
+    + 'width="1200" height="600" role="img" aria-label="[^"]+"></svg>', 'g');
+  const svgs = [...html.matchAll(re)];
+  assert.deepEqual(svgs.map((m) => m[1]), ['svgKeyPreview', 'svgEncrypt', 'svgDecrypt']);
+});
+
+test('ボタンは type="button"、知らせの要素は aria-live', () => {
+  for (const m of html.matchAll(/<button [^>]*>/g)) assert.match(m[0], /type="button"/, m[0]);
+  for (const id of ['keyNotice', 'encNotice', 'decErrorMsg', 'exportMsg']) {
+    assert.ok(new RegExp(`id="${id}"[^>]*aria-live="polite"`).test(html), `${id} に aria-live がない`);
+  }
+});
+
+test('noscript と viewport と lang がある', () => {
+  assert.match(html, /<html lang="ja">/);
+  assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1"/);
+  assert.match(html, /<noscript>/);
+});
+
+test('外部への読み込みがない（同一オリジンだけ）。外部リンクに rel="noopener noreferrer"', () => {
+  const urls = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
+  for (const u of urls) assert.ok(u.startsWith('https://github.com/'), u);
+  assert.doesNotMatch(html, /<link[^>]+href="https?:\/\//);
+  assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//);
+  for (const m of html.matchAll(/<a [^>]*href="https?:\/\/[^"]+"[^>]*>/g)) assert.match(m[0], /rel="noopener noreferrer"/, m[0]);
+});
+
+test('リード文は現行の仕様（「鍵を表示」を OFF にすると折れ線だけになる）', () => {
+  assert.match(html, /「鍵を表示」をOFFにすると、折れ線だけが暗号文になります/);
+  assert.doesNotMatch(html, /「暗号化」で鍵と破線を隠すと/);
+});

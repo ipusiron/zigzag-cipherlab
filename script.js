@@ -42,17 +42,40 @@ function stopTimers(){
 }
 
 // --- Tabs ---
-$$('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    // 再生中のタイマーは止める（非表示のパネルの裏で描画と出力が進まないように）
-    const wasRunning = stopTimers();
-    $$('.tab').forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
-    $$('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    $('#'+btn.dataset.tab).classList.add('active');
-    if(wasRunning){ drawEncryptViz(); drawDecryptViz(); }
+function activateTab(btn){
+  // 再生中のタイマーは止める（非表示のパネルの裏で描画と出力が進まないように）
+  const wasRunning = stopTimers();
+  $$('.tab').forEach(b=>{
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+    b.setAttribute('tabindex', '-1');
   });
+  $$('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
+  btn.removeAttribute('tabindex');
+  $('#'+btn.dataset.tab).classList.add('active');
+  if(wasRunning){ drawEncryptViz(); drawDecryptViz(); }
+  // 表示されたパネルの図を枠の幅に合わせ直す
+  $$('.panel.active .viz').forEach(fitSVG);
+}
+$$('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>activateTab(btn));
+});
+// 矢印キーでタブを移動（WAI-ARIA のタブの作法）
+$('.tabs').addEventListener('keydown', (ev)=>{
+  const tabs = $$('.tab');
+  const i = tabs.indexOf(document.activeElement);
+  if(i < 0) return;
+  let next = null;
+  if(ev.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+  else if(ev.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+  else if(ev.key === 'Home') next = tabs[0];
+  else if(ev.key === 'End') next = tabs[tabs.length - 1];
+  if(!next) return;
+  ev.preventDefault();
+  activateTab(next);
+  next.focus();
 });
 
 // --- Notices ---
@@ -90,8 +113,35 @@ function elSVG(tag, attrs={}){
   for(const [k,v] of Object.entries(attrs)){ e.setAttribute(k, v); }
   return e;
 }
+// 図は自然な大きさ（1単位＝1px）で描き、枠より広いときは枠の幅に合わせて縮める。ただし MIN_SCALE より小さくはせず、
+// 残りは枠の中のスクロールで見せる（文字が読めない大きさまで縮めない）
+const MIN_SCALE = 0.55;
+const viewBoxOf = new Map();  // svg → {width, height}
+function fitSVG(svg){
+  const vb = viewBoxOf.get(svg);
+  if(!vb) return;
+  const wrap = svg.parentElement;
+  const avail = wrap ? wrap.clientWidth : 0;
+  const scale = avail > 0 ? Math.min(1, Math.max(MIN_SCALE, avail / vb.width)) : 1;
+  svg.setAttribute('width', String(Math.round(vb.width * scale)));
+  svg.setAttribute('height', String(Math.round(vb.height * scale)));
+  svg.dataset.scale = String(scale);
+}
 function setViewBox(svg, vb){
   svg.setAttribute('viewBox', `0 0 ${vb.width} ${vb.height}`);
+  viewBoxOf.set(svg, vb);
+  fitSVG(svg);
+}
+// 再生中の点が見えるように枠をスクロールする
+function revealPoint(svg, p){
+  const wrap = svg.parentElement;
+  if(!wrap) return;
+  const s = Number(svg.dataset.scale) || 1;
+  const x = p.x * s, y = p.y * s;
+  if(y > wrap.scrollTop + wrap.clientHeight - 40) wrap.scrollTop = Math.max(0, y - wrap.clientHeight * 0.6);
+  else if(y < wrap.scrollTop + 40) wrap.scrollTop = Math.max(0, y - 40);
+  if(x > wrap.scrollLeft + wrap.clientWidth - 40) wrap.scrollLeft = Math.max(0, x - wrap.clientWidth * 0.6);
+  else if(x < wrap.scrollLeft + 40) wrap.scrollLeft = Math.max(0, x - 40);
 }
 
 // --- Draw Key Guides (letters + dashed) ---
@@ -162,7 +212,7 @@ function showEncNotice(result){
       detail.push(t('enc.skippedMissing', { letters }));
     }
     if(result.others > 0) detail.push(t('enc.skippedOthers', { count: result.others }));
-    parts.push(t('enc.skipped', { count: skipped, detail: detail.join('、') }));
+    parts.push(t('enc.skipped', { count: skipped, detail: detail.join(t('enc.skippedSep')) }));
   }
   showNotice($('#encNotice'), parts.join(' '));
 }
@@ -281,6 +331,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // 初期キー統計 & プレビュー
   setKey(state.key);
+
+  // 枠の幅が変わったら図を合わせ直す
+  if(typeof ResizeObserver === 'function'){
+    const ro = new ResizeObserver((entries)=>{
+      for(const e of entries){ const svg = e.target.querySelector('.viz'); if(svg) fitSVG(svg); }
+    });
+    $$('.viz-wrap').forEach(w=>ro.observe(w));
+  } else {
+    window.addEventListener('resize', ()=>$$('.viz').forEach(fitSVG));
+  }
 
   // テーマ切替
   $('#themeToggle').addEventListener('click', toggleTheme);
@@ -468,7 +528,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       svg.appendChild(rootGroup);
       drawKeyGuides(rootGroup, state.key, result.viewBox.height);
       drawPolylineWithPoints(svg, pts.slice(0, count));
-      if(count > 0) drawStepMarker(svg, pts[count - 1]);
+      if(count > 0){ drawStepMarker(svg, pts[count - 1]); revealPoint(svg, pts[count - 1]); }
     };
 
     state.enc.stepIndex = 0;
@@ -518,7 +578,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       setViewBox(svg, vb);
       if(!state.dec.guidesHidden) drawKeyGuides(svg, state.key, vb.height);
       drawPolylineWithPoints(svg, sortedPts.slice(0, count));
-      if(count > 0) drawStepMarker(svg, sortedPts[count - 1]);
+      if(count > 0){ drawStepMarker(svg, sortedPts[count - 1]); revealPoint(svg, sortedPts[count - 1]); }
       $('#decodedOutput').value = decoded.text.slice(0, count);
     };
 

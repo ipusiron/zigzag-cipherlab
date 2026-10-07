@@ -12,6 +12,7 @@
     'enc.skipped': '{count}文字を飛ばしました（{detail}）。',
     'enc.skippedMissing': '鍵にない英字 {letters}',
     'enc.skippedOthers': '英字以外 {count}文字',
+    'enc.skippedSep': '、',
     'enc.truncated': '鍵にある文字が{max}文字を超えたので、{max}文字目までを暗号化しました。',
     'key.empty': '鍵が空です。英字（A〜Z）を1文字以上入れてください。暗号化しても点は打たれません。',
     'key.missing': '鍵にない文字: {letters}（平文にあっても飛ばされます）',
