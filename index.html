@@ -47,6 +47,7 @@
             <div>重複数：<span id="statDup">0</span></div>
             <div>欠落：<span id="statMiss">0</span></div>
           </div>
+          <p id="keyNotice" class="notice" aria-live="polite" hidden></p>
           <p class="hint">
             ※ 縦配置・横配置は本質的に同じです。本ツールでは横一列に鍵を表示します。
           </p>
@@ -65,6 +66,7 @@
         <div class="controls">
           <label for="plainInput" class="label">平文（自動で大文字化。鍵にない文字はスキップ）</label>
           <textarea id="plainInput" class="textarea" rows="6" placeholder="HELLOWORLD"></textarea>
+          <p id="encNotice" class="notice" aria-live="polite" hidden></p>
 
           <label class="toggle">
             <input type="checkbox" id="chkRealtime" checked />
@@ -120,7 +122,7 @@
             折れ線ポイント（例：<span class="mono">x1,y1 x2,y2 x3,y3 ...</span>）
           </label>
           <textarea id="pointsInput" class="textarea" rows="4" placeholder="例）120,160 195,220 240,260"></textarea>
-          <div id="decErrorMsg" class="error-msg"></div>
+          <div id="decErrorMsg" class="error-msg" aria-live="polite" hidden></div>
 
           <label class="toggle">
             <input type="checkbox" id="chkShowKeyDec" checked />
@@ -305,6 +307,8 @@
     </div>
   </footer>
 
+  <script src="js/zz-core.js"></script>
+  <script src="js/messages.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

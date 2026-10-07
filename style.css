@@ -380,9 +380,15 @@ a{color:var(--accent)}
   color:var(--danger);
   font-size:13px;
   margin-top:6px;
-  display:none;
   line-height:1.4;
 }
+.notice{
+  color:var(--muted);
+  font-size:13px;
+  margin:6px 0 0;
+  line-height:1.4;
+}
+[hidden]{display:none !important}
 
 .btn{
   background:var(--btn);
