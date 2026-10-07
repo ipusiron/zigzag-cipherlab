@@ -74,9 +74,26 @@ a{color:var(--accent-text)}
   text-align:center;
   min-width:0;
 }
-.header-content .theme-toggle{
+.header-actions{
   grid-column:3;
   justify-self:end;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.lang-toggle{
+  background:var(--btn);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:8px;
+  height:40px;
+  padding:0 12px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:600;
+}
+.lang-toggle:hover{
+  background:var(--btn-h);
 }
 .app-header h1{
   margin:0 0 8px;
@@ -112,7 +129,7 @@ a{color:var(--accent-text)}
     text-align:center;
   }
   .header-title,
-  .header-content .theme-toggle{
+  .header-actions{
     grid-column:auto;
     justify-self:center;
   }
@@ -423,6 +440,9 @@ a{color:var(--accent-text)}
 .section-title{
   margin:0 0 8px;
   font-size:18px;
+}
+.select-label{
+  margin-top:10px;
 }
 /* 解析の棒グラフ */
 .bar{fill:var(--accent)}

@@ -5,7 +5,10 @@
 
 const ZZ = window.ZZCore;
 const M = window.ZZMessages;
+const I18N = window.ZZI18n;
 const t = (key, vars) => M.t(key, vars);
+// 言語を決めて静的な文言を当てる（?lang= → 保存した選択 → ブラウザーの言語）
+I18N.use(I18N.initialLanguage(location.search, I18N.readSaved(), navigator.languages), document);
 // 重複鍵の列の選択とシャッフルは予測不能な乱数（crypto.getRandomValues）で行う。選び方は #dupMode で切り替える
 const randomBytes = ZZ.cryptoBytes(window.crypto);
 let chooser = ZZ.makeChooser('random', randomBytes);
@@ -464,6 +467,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
   // テーマ切替
   $('#themeToggle').addEventListener('click', toggleTheme);
+
+  // 言語切替。静的な文言を当て直し、動的に描いたもの（知らせ・図の見出し）も描き直す
+  $('#langToggle').addEventListener('click', ()=>{
+    const next = M.getLanguage() === 'ja' ? 'en' : 'ja';
+    I18N.use(next, document);
+    I18N.save(next);
+    updateThemeIcon(document.documentElement.getAttribute('data-theme') || 'dark');
+    showDecError([]);
+    setKey(state.key);
+    if($('#tab-analyze').classList.contains('active')) drawAnalyze();
+  });
 
   // アコーディオン機能
   $$('.accordion-header').forEach(header => {

@@ -34,7 +34,7 @@ test('インラインのイベントハンドラーと style 属性がない', (
 
 test('スクリプトは計算部・文言・画面の順に読み込む', () => {
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepEqual(srcs, ['js/zz-core.js', 'js/messages.js', 'script.js']);
+  assert.deepEqual(srcs, ['js/zz-core.js', 'js/messages.js', 'js/i18n.js', 'script.js']);
 });
 
 test('主要な要素の id がそろっている', () => {
@@ -63,7 +63,7 @@ test('タブとパネルが id で結ばれている（role・aria-controls・ar
       `tab-${panelKey} のパネルに aria-labelledby がない`,
     );
   }
-  assert.match(html, /<nav class="tabs" role="tablist" aria-label="[^"]+">/);
+  assert.match(html, /<nav class="tabs" role="tablist" aria-label="[^"]+"[^>]*>/);
 });
 
 test('アコーディオンは見出しの中のボタン（button の中に h2 を入れない）で、aria-expanded と aria-controls がある', () => {
@@ -81,10 +81,10 @@ test('アコーディオンは見出しの中のボタン（button の中に h2 
 
 test('図は viz-wrap の中にあり、読み上げ用の名前がある', () => {
   const re = new RegExp('<div class="viz-wrap">\\s*<svg id="(\\w+)" class="viz" viewBox="0 0 1200 600" '
-    + 'width="1200" height="600" role="img" aria-label="[^"]+"></svg>', 'g');
+    + 'width="1200" height="600" role="img" aria-label="[^"]+" data-i18n-attr="aria-label:[\\w.]+"></svg>', 'g');
   const svgs = [...html.matchAll(re)];
   assert.deepEqual(svgs.map((m) => m[1]), ['svgKeyPreview', 'svgEncrypt', 'svgDecrypt']);
-  assert.match(html, /<div class="viz-wrap">\s*<svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="[^"]+">/);
+  assert.match(html, /<div class="viz-wrap">\s*<svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="[^"]+"[^>]*>/);
 });
 
 test('ボタンは type="button"、知らせの要素は aria-live', () => {
@@ -104,7 +104,7 @@ test('外部への読み込みがない（同一オリジンだけ）。外部�
   const urls = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
   for (const u of urls) assert.ok(u.startsWith('https://github.com/') || u.startsWith('https://ipusiron.github.io/'), u);
   // 解析タブの Frequency Analyzer へのリンク（新しいタブで開く。鍵は渡さない）
-  assert.match(html, /<a id="lnkFreq" class="btn primary link-btn" href="https:\/\/ipusiron\.github\.io\/frequency-analyzer\/" target="_blank" rel="noopener noreferrer">/);
+  assert.match(html, /<a id="lnkFreq" class="btn primary link-btn" href="https:\/\/ipusiron\.github\.io\/frequency-analyzer\/" target="_blank" rel="noopener noreferrer"[^>]*>/);
   assert.doesNotMatch(html, /<link[^>]+href="https?:\/\//);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//);
   for (const m of html.matchAll(/<a [^>]*href="https?:\/\/[^"]+"[^>]*>/g)) assert.match(m[0], /rel="noopener noreferrer"/, m[0]);
@@ -120,4 +120,10 @@ test('重複鍵の選び方の select は計算部の id と同じ値を持つ',
 test('リード文は現行の仕様（「鍵を表示」を OFF にすると折れ線だけになる）', () => {
   assert.match(html, /「鍵を表示」をOFFにすると、折れ線だけが暗号文になります/);
   assert.doesNotMatch(html, /「暗号化」で鍵と破線を隠すと/);
+});
+
+test('テーマと言語のボタンに読み上げ用の名前があり、title も辞書から入る', () => {
+  assert.match(html, /<button id="langToggle" class="lang-toggle" type="button" data-i18n="ui\.langButton" data-i18n-attr="aria-label:ui\.langLabel">/);
+  assert.match(html, /<button id="themeToggle" class="theme-toggle" type="button" data-i18n-attr="aria-label:theme\.toLight">/);
+  assert.match(html, /<title data-i18n="ui\.docTitle">/);
 });

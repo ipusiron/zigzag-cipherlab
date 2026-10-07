@@ -264,14 +264,16 @@ zigzag-cipherlab/
 │   ├── screenshot3.png     # 復号タブ
 │   └── screenshot4.png     # 座学の比較表（ダークモード）
 ├── js/                     # 画面から読み込むスクリプト
-│   ├── zz-core.js          # 計算部（DOMなし。暗号化・復号・点の読み書き・SVG文書）
-│   └── messages.js         # 画面の文言
+│   ├── zz-core.js          # 計算部（DOMなし。暗号化・復号・点の読み書き・SVG文書・解析）
+│   ├── messages.js         # 画面の文言（日本語・英語）
+│   └── i18n.js             # 言語の決定と静的な文言の差し替え
 ├── test/                   # 自動テスト（node --test）
 │   ├── load.js             # テストから js/*.js を読み込む補助
 │   ├── core.test.js        # 計算部のテスト（既知解答・往復・上限・乱数・SVG）
 │   ├── html.test.js        # index.html の静的検証（CSP・aria・読み込み順）
 │   ├── contrast.test.js    # 配色のコントラスト（ダーク・ライト）
 │   ├── format.test.js      # 行長・行数・文言の置き場所
+│   ├── i18n.test.js        # 日英の辞書と画面の文言の対応
 │   └── readme.test.js      # README の例・表・画像・ツリー・表記
 ├── index.html              # 画面（鍵生成・暗号化・復号・座学の4タブ）
 ├── script.js               # 画面の処理（描画・イベント・テーマ）
