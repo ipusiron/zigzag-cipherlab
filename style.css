@@ -74,9 +74,26 @@ a{color:var(--accent-text)}
   text-align:center;
   min-width:0;
 }
-.header-content .theme-toggle{
+.header-actions{
   grid-column:3;
   justify-self:end;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.lang-toggle{
+  background:var(--btn);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:8px;
+  height:40px;
+  padding:0 12px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:600;
+}
+.lang-toggle:hover{
+  background:var(--btn-h);
 }
 .app-header h1{
   margin:0 0 8px;
@@ -112,7 +129,7 @@ a{color:var(--accent-text)}
     text-align:center;
   }
   .header-title,
-  .header-content .theme-toggle{
+  .header-actions{
     grid-column:auto;
     justify-self:center;
   }
@@ -395,8 +412,45 @@ a{color:var(--accent-text)}
 }
 
 .toggle{display:flex; align-items:center; gap:8px; margin:10px 0 2px}
-.button-row{display:flex; gap:8px; margin:10px 0}
-.export-row{display:flex; gap:8px; align-items:center; margin:10px 0}
+.button-row{display:flex; gap:8px; margin:10px 0; flex-wrap:wrap}
+.export-row{display:flex; gap:8px; align-items:center; margin:10px 0 4px; flex-wrap:wrap}
+.select{
+  width:100%;
+  font-size:16px;
+  background:var(--card);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px 10px;
+  margin-bottom:6px;
+  min-width:0;
+}
+[data-theme="light"] .select{
+  background:#ffffff;
+  border-color:#d1d5db;
+}
+.link-btn{
+  display:inline-flex;
+  align-items:center;
+  text-decoration:none;
+}
+.link-btn[aria-disabled="true"]{
+  opacity:0.6;
+}
+.section-title{
+  margin:0 0 8px;
+  font-size:18px;
+}
+.select-label{
+  margin-top:10px;
+}
+/* 解析の棒グラフ */
+.bar{fill:var(--accent)}
+.bar.letters{fill:var(--accent-2)}
+.bar-axis{stroke:var(--dash); stroke-width:1.2}
+.bar-title{fill:var(--muted); font-size:14px}
+.bar-label{fill:var(--text); font-size:14px}
+.bar-count{fill:var(--muted); font-size:12px}
 .msg{color:var(--low)}
 .error-msg{
   color:var(--danger);

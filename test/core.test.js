@@ -289,3 +289,91 @@ test('zz-core.js に DOM・危険な書き込みがない', () => {
   }
   assert.doesNotMatch(src, /Math\.random/);
 });
+
+// ---- 第2弾 ----
+
+test('列の選び方: 順番に回す（文字ごとに次の列へ）、最初、ランダム。知らない id は例外', () => {
+  const cyc = C.encrypt('ABABAA', 'AABBA', { chooser: C.cycleChooser() });
+  assert.deepEqual(cyc.points.map((p) => p.idx), [0, 2, 1, 3, 4, 0], 'A は 0,1,4 を順に、B は 2,3 を順に回る');
+  assert.deepEqual(C.encrypt('AAAA', 'AAAAB', { chooser: C.makeChooser('first') }).points.map((p) => p.idx), [0, 0, 0, 0]);
+  assert.deepEqual(C.encrypt('AAAA', 'AAAAB', { chooser: C.makeChooser('cycle') }).points.map((p) => p.idx), [0, 1, 2, 3]);
+  const rnd = C.encrypt('AAAA', 'AAAAB', { chooser: C.makeChooser('random', bytesFrom([0, 1, 0, 3, 0, 2, 0, 0])) });
+  assert.deepEqual(rnd.points.map((p) => p.idx), [1, 3, 2, 0]);
+  assert.deepEqual(C.CHOOSER_IDS, ['random', 'cycle', 'first']);
+  assert.throws(() => C.makeChooser('nope'), RangeError);
+  // 記録（cache）と組み合わせると、すでに選んだ位置は回さない
+  const cache = new Map();
+  const a = C.encrypt('AA', 'AAB', { chooser: C.cycleChooser(), cache });
+  assert.deepEqual(a.points.map((p) => p.idx), [0, 1]);
+  const b = C.encrypt('AAA', 'AAB', { chooser: C.cycleChooser(), cache });
+  assert.deepEqual(b.points.map((p) => p.idx), [0, 1, 0], '3文字目だけ新しい chooser が選ぶ（0から）');
+});
+
+test('列番号の列: 折れ線は換字暗号の暗号文そのもの。逆順の鍵で HELLOWORLD はアトバシュ SVOOLDLIOW になる', () => {
+  const r = C.encrypt('HELLOWORLD', KEY);
+  const seq = C.columnSequence(r.points, 26);
+  assert.deepEqual(seq.indices, [7, 4, 11, 11, 14, 22, 14, 17, 11, 3]);
+  assert.equal(seq.text, '7 4 11 11 14 22 14 17 11 3');
+  assert.equal(C.columnLetters(seq.indices, 26), 'HELLOWORLD', '既定の鍵では列番号＝文字（秘密にならない）');
+  const rev = [...KEY].reverse().join('');
+  const r2 = C.encrypt('HELLOWORLD', rev);
+  const seq2 = C.columnSequence(r2.points, 26);
+  assert.equal(C.columnLetters(seq2.indices, 26), 'SVOOLDLIOW');
+  // 点の順序が崩れていても y の順に読む
+  const shuffled = [...r.points].reverse();
+  assert.deepEqual(C.columnSequence(shuffled, 26).indices, seq.indices);
+  // 26 列を超える鍵は文字に写せない。鍵が空なら列番号も出ない
+  assert.equal(C.columnLetters([0, 26], 27), null);
+  assert.equal(C.columnLetters([0], 0), null);
+  assert.deepEqual(C.columnSequence(r.points, 0).indices, []);
+  // 重複鍵: 同じ文字が別の列に散る（列ごとの数がならされる）
+  const dup = C.encrypt('LLLL', 'ALBLCL', { chooser: C.cycleChooser() });
+  assert.deepEqual(C.columnSequence(dup.points, 6).indices, [1, 3, 5, 1]);
+  assert.deepEqual(C.columnCounts(dup.points, 6), [0, 2, 0, 1, 0, 1]);
+  assert.deepEqual(C.letterCounts(dup.points), { L: 4 });
+  assert.deepEqual(C.letterCounts(r.points), { H: 1, E: 1, L: 3, O: 2, W: 1, R: 1, D: 1 });
+});
+
+test('Frequency Analyzer へのリンクは #text= で、URL エンコードする', () => {
+  assert.equal(C.FREQUENCY_ANALYZER, 'https://ipusiron.github.io/frequency-analyzer/');
+  assert.equal(C.frequencyAnalyzerUrl('SVOOL DLIOW'), 'https://ipusiron.github.io/frequency-analyzer/#text=SVOOL%20DLIOW');
+  assert.equal(C.frequencyAnalyzerUrl('A&B#C'), 'https://ipusiron.github.io/frequency-analyzer/#text=A%26B%23C');
+});
+
+test('共有リンク（鍵を含まない）と # からの読み取りが往復する', () => {
+  const r = C.encrypt('SECRET', KEY);
+  const link = C.shareLink(r.points, 'https://ipusiron.github.io/zigzag-cipherlab/');
+  assert.ok(link.startsWith('https://ipusiron.github.io/zigzag-cipherlab/#points='));
+  assert.equal(link.includes('SECRET'), false);
+  assert.equal(link.includes(KEY), false);
+  const hash = link.slice(link.indexOf('#'));
+  assert.equal(C.readPointsFromHash(hash), C.pointsToText(r.points));
+  assert.equal(C.readPointsFromHash('#lang=en&points=40%2C100%2080%2C124'), '40,100 80,124');
+  assert.equal(C.readPointsFromHash('#points=40,100+80,124'), '40,100 80,124', '+ は空白');
+  assert.equal(C.readPointsFromHash('#points=%E0%A4%A'), '%E0%A4%A', '壊れた符号化はそのまま返す');
+  assert.equal(C.readPointsFromHash('#text=abc'), null);
+  assert.equal(C.readPointsFromHash(''), null);
+  assert.equal(C.readPointsFromHash('#mypoints=1,2'), null);
+  assert.equal(C.stripPointsFromHash('#points=1,2'), '');
+  assert.equal(C.stripPointsFromHash('#lang=en&points=1,2&x=1'), '#lang=en&x=1');
+  assert.equal(C.stripPointsFromHash(''), '');
+  // 読み戻した点は復号できる
+  const back = C.parsePoints(C.readPointsFromHash(hash));
+  assert.deepEqual(back.errors, []);
+  assert.equal(C.decrypt(back.pts, KEY).text, 'secret');
+});
+
+test('SVG のテキストから折れ線の点を取り出す（このツールの書き出しを読み戻せる）', () => {
+  const r = C.encrypt('HELLO', KEY);
+  for (const showKey of [true, false]) {
+    const svg = C.svgDocument({ key: KEY, points: r.points, showKey });
+    assert.equal(C.pointsFromSvgText(svg), C.pointsToText(r.points));
+  }
+  assert.equal(C.pointsFromSvgText('<svg><polyline class="x" points=\'1,2 3,4\'/></svg>'), '1,2 3,4');
+  assert.equal(C.pointsFromSvgText('<svg><polyline points = " 1,2  3,4 " fill="none"/></svg>'), '1,2  3,4');
+  assert.equal(C.pointsFromSvgText('<svg><circle r="1"/></svg>'), null);
+  assert.equal(C.pointsFromSvgText(''), null);
+  assert.equal(C.pointsFromSvgText(null), null);
+  const back = C.parsePoints(C.pointsFromSvgText(C.svgDocument({ key: KEY, points: r.points, showKey: false })));
+  assert.equal(C.decrypt(back.pts, KEY).text, 'hello');
+});

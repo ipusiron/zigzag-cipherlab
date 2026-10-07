@@ -6,61 +6,63 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';" />
   <meta name="referrer" content="no-referrer" />
   <link rel="icon" href="data:," />
-  <title>Zigzag CipherLab - ジグザグ暗号</title>
+  <title data-i18n="ui.docTitle">Zigzag CipherLab - ジグザグ暗号</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="app-header">
     <div class="header-content">
       <div class="header-title">
-        <h1>Zigzag CipherLab - ジグザグ暗号ツール</h1>
+        <h1 data-i18n="ui.title">Zigzag CipherLab - ジグザグ暗号ツール</h1>
         <p class="lead">
-          鍵（横一列のアルファベット）を基準に、平文を<span class="mono">点→線</span>で折れ線化する幾何学サイファ。<br/>
-          「鍵を表示」をOFFにすると、折れ線だけが暗号文になります。
+          <span data-i18n="ui.lead1">鍵（横一列のアルファベット）を基準に、平文を点→線で折れ線化する幾何学サイファ。</span><br/>
+          <span data-i18n="ui.lead2">「鍵を表示」をOFFにすると、折れ線だけが暗号文になります。</span>
         </p>
       </div>
-      <button id="themeToggle" class="theme-toggle" type="button" aria-label="テーマ切替">☀️</button>
+      <div class="header-actions">
+        <button id="langToggle" class="lang-toggle" type="button" data-i18n="ui.langButton" data-i18n-attr="aria-label:ui.langLabel">EN</button>
+        <button id="themeToggle" class="theme-toggle" type="button" data-i18n-attr="aria-label:theme.toLight">☀️</button>
+      </div>
     </div>
   </header>
 
-  <noscript><p class="noscript">このツールはJavaScriptで動きます。JavaScriptを有効にしてください。</p></noscript>
+  <noscript><p class="noscript" data-i18n="ui.noscript">このツールはJavaScriptで動きます。JavaScriptを有効にしてください。</p></noscript>
 
   <main class="app-main">
-    <nav class="tabs" role="tablist" aria-label="機能タブ">
-      <button class="tab active" id="tab-btn-key" type="button" role="tab" data-tab="tab-key" aria-selected="true" aria-controls="tab-key">鍵生成</button>
-      <button class="tab" id="tab-btn-enc" type="button" role="tab" data-tab="tab-enc" aria-selected="false" aria-controls="tab-enc" tabindex="-1">暗号化</button>
-      <button class="tab" id="tab-btn-dec" type="button" role="tab" data-tab="tab-dec" aria-selected="false" aria-controls="tab-dec" tabindex="-1">復号</button>
-      <button class="tab" id="tab-btn-about" type="button" role="tab" data-tab="tab-about" aria-selected="false" aria-controls="tab-about" tabindex="-1">座学</button>
+    <nav class="tabs" role="tablist" aria-label="機能タブ" data-i18n-attr="aria-label:ui.tabsLabel">
+      <button class="tab active" id="tab-btn-key" type="button" role="tab" data-tab="tab-key" aria-selected="true" aria-controls="tab-key" data-i18n="ui.tabKey">鍵生成</button>
+      <button class="tab" id="tab-btn-enc" type="button" role="tab" data-tab="tab-enc" aria-selected="false" aria-controls="tab-enc" tabindex="-1" data-i18n="ui.tabEnc">暗号化</button>
+      <button class="tab" id="tab-btn-dec" type="button" role="tab" data-tab="tab-dec" aria-selected="false" aria-controls="tab-dec" tabindex="-1" data-i18n="ui.tabDec">復号</button>
+      <button class="tab" id="tab-btn-analyze" type="button" role="tab" data-tab="tab-analyze" aria-selected="false" aria-controls="tab-analyze" tabindex="-1" data-i18n="ui.tabAnalyze">解析</button>
+      <button class="tab" id="tab-btn-about" type="button" role="tab" data-tab="tab-about" aria-selected="false" aria-controls="tab-about" tabindex="-1" data-i18n="ui.tabAbout">座学</button>
     </nav>
 
     <!-- 鍵生成 -->
     <section id="tab-key" class="panel active" role="tabpanel" aria-labelledby="tab-btn-key">
       <div class="two-col">
         <div class="controls">
-          <label for="keyInput" class="label">鍵（アルファベット配列。重複／欠落可）</label>
+          <label for="keyInput" class="label" data-i18n="key.label">鍵（アルファベット配列。重複／欠落可）</label>
           <textarea id="keyInput" class="textarea" rows="3">ABCDEFGHIJKLMNOPQRSTUVWXYZ</textarea>
 
           <div class="button-row">
-            <button id="btnKeyApply" class="btn primary" type="button">適用</button>
-            <button id="btnKeyShuffle" class="btn" type="button">シャッフル</button>
-            <button id="btnKeyReset" class="btn ghost" type="button">リセット</button>
+            <button id="btnKeyApply" class="btn primary" type="button" data-i18n="key.apply">適用</button>
+            <button id="btnKeyShuffle" class="btn" type="button" data-i18n="key.shuffle">シャッフル</button>
+            <button id="btnKeyReset" class="btn ghost" type="button" data-i18n="key.reset">リセット</button>
           </div>
 
           <div class="stats">
-            <div>長さ：<span id="statLen">26</span></div>
-            <div>重複数：<span id="statDup">0</span></div>
-            <div>欠落：<span id="statMiss">0</span></div>
+            <div><span data-i18n="key.statLen">長さ：</span><span id="statLen">26</span></div>
+            <div><span data-i18n="key.statDup">重複数：</span><span id="statDup">0</span></div>
+            <div><span data-i18n="key.statMiss">欠落：</span><span id="statMiss">0</span></div>
           </div>
           <p id="keyNotice" class="notice" aria-live="polite" hidden></p>
-          <p class="hint">
-            ※ 縦配置・横配置は本質的に同じです。本ツールでは横一列に鍵を表示します。
-          </p>
+          <p class="hint" data-i18n="key.hint">※ 縦配置・横配置は本質的に同じです。本ツールでは横一列に鍵を表示します。</p>
         </div>
 
         <div class="viz-card">
-          <div class="viz-header">プレビュー</div>
+          <div class="viz-header" data-i18n="key.preview">プレビュー</div>
           <div class="viz-wrap">
-            <svg id="svgKeyPreview" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="鍵プレビュー"></svg>
+            <svg id="svgKeyPreview" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="鍵プレビュー" data-i18n-attr="aria-label:key.previewAria"></svg>
           </div>
         </div>
       </div>
@@ -70,53 +72,60 @@
     <section id="tab-enc" class="panel" role="tabpanel" aria-labelledby="tab-btn-enc">
       <div class="two-col">
         <div class="controls">
-          <label for="plainInput" class="label">平文（自動で大文字化。鍵にない文字はスキップ）</label>
-          <textarea id="plainInput" class="textarea" rows="6" placeholder="HELLOWORLD"></textarea>
+          <label for="plainInput" class="label" data-i18n="enc.label">平文（自動で大文字化。鍵にない文字はスキップ）</label>
+          <textarea id="plainInput" class="textarea" rows="6" placeholder="HELLOWORLD" data-i18n-attr="placeholder:enc.placeholder"></textarea>
           <p id="encNotice" class="notice" aria-live="polite" hidden></p>
 
           <label class="toggle">
             <input type="checkbox" id="chkRealtime" checked />
-            <span>リアルタイム描画</span>
+            <span data-i18n="enc.realtime">リアルタイム描画</span>
           </label>
 
           <label class="toggle">
             <input type="checkbox" id="chkShowKeyEnc" checked />
-            <span>鍵を表示</span>
+            <span data-i18n="enc.showKey">鍵を表示</span>
           </label>
 
+          <label class="label select-label" for="dupMode" data-i18n="enc.dupLabel">重複鍵の列の選び方</label>
+          <select id="dupMode" class="select">
+            <option value="random" selected data-i18n="enc.dupRandom">ランダム（予測不能な乱数）</option>
+            <option value="cycle" data-i18n="enc.dupCycle">順番に回す（同じ文字が出るたびに次の列）</option>
+            <option value="first" data-i18n="enc.dupFirst">最初の列（重複を使わない）</option>
+          </select>
+
           <div class="button-row">
-            <button id="btnEncrypt" class="btn primary" type="button">暗号化</button>
+            <button id="btnEncrypt" class="btn primary" type="button" data-i18n="enc.encrypt">暗号化</button>
           </div>
 
-          <label class="label" for="encryptedPoints">暗号文（折れ線ポイント）</label>
-          <textarea id="encryptedPoints" class="textarea mono" rows="3" readonly placeholder="暗号化ボタンを押すと、ここに折れ線ポイントが表示されます"></textarea>
+          <label class="label" for="encryptedPoints" data-i18n="enc.outLabel">暗号文（折れ線ポイント）</label>
+          <textarea id="encryptedPoints" class="textarea mono" rows="3" readonly placeholder="暗号化ボタンを押すと、ここに折れ線ポイントが表示されます" data-i18n-attr="placeholder:enc.outPlaceholder"></textarea>
 
           <div class="export-row">
-            <button id="btnExportPoints" class="btn" type="button">折れ線ポイントをコピー</button>
-            <button id="btnDownloadSVG" class="btn" type="button">SVGをダウンロード</button>
-            <span id="exportMsg" class="msg" aria-live="polite"></span>
+            <button id="btnExportPoints" class="btn" type="button" data-i18n="enc.copyPoints">折れ線ポイントをコピー</button>
+            <button id="btnDownloadSVG" class="btn" type="button" data-i18n="enc.downloadSvg">SVGをダウンロード</button>
+            <button id="btnDownloadPNG" class="btn" type="button" data-i18n="enc.downloadPng">PNGをダウンロード</button>
+            <button id="btnShareLink" class="btn" type="button" data-i18n="enc.shareLink">共有リンクをコピー（鍵なし）</button>
           </div>
+          <span id="exportMsg" class="msg" aria-live="polite"></span>
 
-          <p class="hint">
-            ※ 重複鍵がある場合は暗号化時にランダム選択されます。鍵を隠してダウンロードしたSVGには、鍵の文字と破線は含まれません。
-          </p>
+          <p class="hint" data-i18n="enc.hint">※ 鍵を隠してダウンロードしたSVG・PNGと共有リンクには、鍵の文字と破線は含まれません。受け取った側は復号タブで読み込めます。</p>
 
           <div class="danger-zone">
             <hr class="separator" />
-            <button id="btnEncClear" class="btn danger" type="button">すべてクリア</button>
+            <button id="btnEncClear" class="btn danger" type="button" data-i18n="enc.clear">すべてクリア</button>
           </div>
         </div>
 
         <div class="viz-card">
           <div class="viz-header">
-            暗号化ビジュアライザー
+            <span data-i18n="enc.vizHeader">暗号化ビジュアライザー</span>
             <div class="viz-controls">
-              <button id="btnEncStepPlay" class="btn-small" type="button">ステップ再生</button>
-              <button id="btnEncStepStop" class="btn-small" type="button">停止</button>
+              <button id="btnEncStepPlay" class="btn-small" type="button" data-i18n="enc.stepPlay">ステップ再生</button>
+              <button id="btnEncStepStop" class="btn-small" type="button" data-i18n="enc.stepStop">停止</button>
             </div>
           </div>
           <div class="viz-wrap">
-            <svg id="svgEncrypt" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="暗号化ビジュアライザー"></svg>
+            <svg id="svgEncrypt" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="暗号化ビジュアライザー" data-i18n-attr="aria-label:enc.vizAria"></svg>
           </div>
         </div>
       </div>
@@ -127,48 +136,87 @@
       <div class="two-col">
         <div class="controls">
           <label for="pointsInput" class="label">
-            折れ線ポイント（例：<span class="mono">x1,y1 x2,y2 x3,y3 ...</span>）
+            <span data-i18n="dec.label1">折れ線ポイント（例：</span><span class="mono">x1,y1 x2,y2 x3,y3 ...</span><span data-i18n="dec.label2">）</span>
           </label>
-          <textarea id="pointsInput" class="textarea" rows="4" placeholder="例）120,160 195,220 240,260"></textarea>
+          <textarea id="pointsInput" class="textarea" rows="4" placeholder="例）120,160 195,220 240,260" data-i18n-attr="placeholder:dec.placeholder"></textarea>
           <div id="decErrorMsg" class="error-msg" aria-live="polite" hidden></div>
 
           <label class="toggle">
             <input type="checkbox" id="chkShowKeyDec" checked />
-            <span>鍵を表示</span>
+            <span data-i18n="dec.showKey">鍵を表示</span>
           </label>
 
           <div class="button-row">
-            <button id="btnSyncFromEnc" class="btn" type="button">暗号化タブから同期</button>
+            <button id="btnSyncFromEnc" class="btn" type="button" data-i18n="dec.sync">暗号化タブから同期</button>
+            <button id="btnLoadSvg" class="btn" type="button" data-i18n="dec.loadSvg">SVGから読み込む</button>
+            <input type="file" id="svgFile" accept=".svg,image/svg+xml" hidden />
           </div>
 
           <div class="button-row">
-            <button id="btnDecode" class="btn primary" type="button">復号</button>
+            <button id="btnDecode" class="btn primary" type="button" data-i18n="dec.decode">復号</button>
           </div>
 
-          <label class="label" for="decodedOutput">復元結果</label>
+          <label class="label" for="decodedOutput" data-i18n="dec.outLabel">復元結果</label>
           <textarea id="decodedOutput" class="textarea mono" rows="3" readonly></textarea>
 
           <p class="hint">
-            ※ 復号は「ポイントをY座標昇順でたどる → 近い列の文字へ写像」します。<br/>
-            鍵にない文字は復元されません。
+            <span data-i18n="dec.hint1">※ 復号は「ポイントをY座標昇順でたどる → 近い列の文字へ写像」します。</span><br/>
+            <span data-i18n="dec.hint2">鍵にない文字は復元されません。</span>
           </p>
 
           <div class="danger-zone">
             <hr class="separator" />
-            <button id="btnDecClear" class="btn danger" type="button">すべてクリア</button>
+            <button id="btnDecClear" class="btn danger" type="button" data-i18n="dec.clear">すべてクリア</button>
           </div>
         </div>
 
         <div class="viz-card">
           <div class="viz-header">
-            復号ビジュアライザー
+            <span data-i18n="dec.vizHeader">復号ビジュアライザー</span>
             <div class="viz-controls">
-              <button id="btnDecStepPlay" class="btn-small" type="button">ステップ再生</button>
-              <button id="btnDecStepStop" class="btn-small" type="button">停止</button>
+              <button id="btnDecStepPlay" class="btn-small" type="button" data-i18n="dec.stepPlay">ステップ再生</button>
+              <button id="btnDecStepStop" class="btn-small" type="button" data-i18n="dec.stepStop">停止</button>
             </div>
           </div>
           <div class="viz-wrap">
-            <svg id="svgDecrypt" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="復号ビジュアライザー"></svg>
+            <svg id="svgDecrypt" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="復号ビジュアライザー" data-i18n-attr="aria-label:dec.vizAria"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解析（折れ線は換字暗号の変装） -->
+    <section id="tab-analyze" class="panel" role="tabpanel" aria-labelledby="tab-btn-analyze">
+      <div class="two-col">
+        <div class="controls">
+          <h2 class="section-title" data-i18n="ana.title">折れ線は換字暗号の変装</h2>
+          <p class="hint" data-i18n="ana.intro">暗号化タブの平文と鍵から、折れ線の各点がどの列にあるかを数えます。重複のない鍵なら、列番号の列は単一換字式暗号の暗号文そのものです。</p>
+          <div class="stats">
+            <div><span data-i18n="ana.statKeyLen">鍵の長さ：</span><span id="anaKeyLen">26</span></div>
+            <div><span data-i18n="ana.statDup">重複数：</span><span id="anaDup">0</span></div>
+            <div><span data-i18n="ana.statPoints">点の数：</span><span id="anaPoints">0</span></div>
+          </div>
+          <p id="anaNotice" class="notice" aria-live="polite" hidden></p>
+
+          <label class="label" for="anaIndices" data-i18n="ana.indicesLabel">列番号の列（yの順、0始まり）</label>
+          <textarea id="anaIndices" class="textarea mono" rows="3" readonly></textarea>
+
+          <label class="label" for="anaLetters" data-i18n="ana.lettersLabel">列番号を標準のアルファベット（A=0…Z=25）に写した文字列</label>
+          <textarea id="anaLetters" class="textarea mono" rows="3" readonly></textarea>
+
+          <div class="button-row">
+            <button id="btnAnaCopy" class="btn" type="button" data-i18n="ana.copy">文字列をコピー</button>
+            <a id="lnkFreq" class="btn primary link-btn" href="https://ipusiron.github.io/frequency-analyzer/" target="_blank" rel="noopener noreferrer" data-i18n="ana.freqLink">Frequency Analyzerで頻度分析</a>
+          </div>
+          <span id="anaMsg" class="msg" aria-live="polite"></span>
+
+          <p class="hint" data-i18n="ana.hint">※ 既定の鍵（ABC…Z）では列番号がそのまま文字なので、写した文字列は平文と同じです。鍵をシャッフルすると単一換字式暗号の暗号文になり、鍵に同じ文字を複数置くと列ごとの数がならされます。</p>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header" data-i18n="ana.vizHeader">文字ごとの数（上：平文の文字、下：折れ線の列）</div>
+          <div class="viz-wrap">
+            <svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="文字ごとの数と列ごとの数" data-i18n-attr="aria-label:ana.vizAria"></svg>
           </div>
         </div>
       </div>
@@ -183,24 +231,22 @@
           <div class="accordion-item">
             <h2 class="accordion-title">
               <button class="accordion-header active" type="button" data-target="about-basic" aria-expanded="true" aria-controls="about-basic">
-                <span class="accordion-label">ジグザグ暗号とは</span>
+                <span class="accordion-label" data-i18n="about.basicTitle">ジグザグ暗号とは</span>
                 <span class="accordion-icon" aria-hidden="true">▼</span>
               </button>
             </h2>
             <div class="accordion-content active" id="about-basic">
               <div class="accordion-inner">
                 <p>
-                  ジグザグ暗号（Zigzag Cipher）は、文字列ではなく<strong>点と線（折れ線）</strong>を暗号文とする
-                  幾何学サイファの一種です。<br>
-                  鍵（アルファベットを一列に並べた紙）に沿って平文の各文字の位置に点を打ち、隣り合う点を結んでいくと、
-                  折れ線が得られます。鍵を外すと、第三者には単なるジグザグ線にしか見えません。
+                  <span data-i18n="about.p1a">ジグザグ暗号（Zigzag Cipher）は、文字列ではなく</span><strong data-i18n="about.p1b">点と線（折れ線）</strong><span data-i18n="about.p1c">を暗号文とする幾何学サイファの一種です。</span><br>
+                  <span data-i18n="about.p1d">鍵（アルファベットを一列に並べた紙）に沿って平文の各文字の位置に点を打ち、隣り合う点を結んでいくと、折れ線が得られます。鍵を外すと、第三者には単なるジグザグ線にしか見えません。</span>
                 </p>
                 <ul>
-                  <li>分類：江戸川乱歩「暗号記法の種類」でいう<em>線代用法</em>（文字の代わりに線で表す方法）に当たるとされる</li>
-                  <li>起源：古代ギリシアのアイネイアス（紀元前4世紀）は『攻城論』第31章で、24の穴をあけた骰子に糸を通し、文字の穴を順にたどって伝える方法を記している。糸が文字の位置を順に結ぶ点は、この暗号と同じ発想。チャールズ1世の考案とする説も伝えられる</li>
-                  <li>鍵の自由度：配列は任意（順列・不規則・欠落・重複すべて可）。ただし既定のABC…Zの並びのままでは、列の位置がそのまま文字を表すので秘密にならない</li>
-                  <li>縦配置・横配置は本質的に同じ</li>
-                  <li>英語で「zigzag cipher」というと、レールフェンス暗号（転置式）の別名を指すことが多い。本ツールの方式は転置ではなく換字の一種で、別の暗号</li>
+                  <li><span data-i18n="about.l1a">分類：江戸川乱歩「暗号記法の種類」でいう</span><em data-i18n="about.l1b">線代用法</em><span data-i18n="about.l1c">（文字の代わりに線で表す方法）に当たるとされる</span></li>
+                  <li data-i18n="about.l2">起源：古代ギリシアのアイネイアス（紀元前4世紀）は『攻城論』第31章で、24の穴をあけた骰子に糸を通し、文字の穴を順にたどって伝える方法を記している。糸が文字の位置を順に結ぶ点は、この暗号と同じ発想。チャールズ1世の考案とする説も伝えられる</li>
+                  <li data-i18n="about.l3">鍵の自由度：配列は任意（順列・不規則・欠落・重複すべて可）。ただし既定のABC…Zの並びのままでは、列の位置がそのまま文字を表すので秘密にならない</li>
+                  <li data-i18n="about.l4">縦配置・横配置は本質的に同じ</li>
+                  <li data-i18n="about.l5">英語で「zigzag cipher」というと、レールフェンス暗号（転置式）の別名を指すことが多い。本ツールの方式は転置ではなく換字の一種で、別の暗号</li>
                 </ul>
               </div>
             </div>
@@ -210,7 +256,7 @@
           <div class="accordion-item">
             <h2 class="accordion-title">
               <button class="accordion-header" type="button" data-target="about-comparison" aria-expanded="false" aria-controls="about-comparison">
-                <span class="accordion-label">他の古典暗号との比較</span>
+                <span class="accordion-label" data-i18n="about.compareTitle">他の古典暗号との比較</span>
                 <span class="accordion-icon" aria-hidden="true">▶</span>
               </button>
             </h2>
@@ -220,78 +266,78 @@
                   <table class="comparison-table">
                     <thead>
                       <tr>
-                        <th>暗号方式</th>
-                        <th>分類</th>
-                        <th>暗号文形式</th>
-                        <th>鍵</th>
-                        <th>解読難易度</th>
-                        <th>特徴</th>
+                        <th data-i18n="table.hMethod">暗号方式</th>
+                        <th data-i18n="table.hClass">分類</th>
+                        <th data-i18n="table.hForm">暗号文形式</th>
+                        <th data-i18n="table.hKey">鍵</th>
+                        <th data-i18n="table.hDiff">解読難易度</th>
+                        <th data-i18n="table.hNote">特徴</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr class="highlight-row">
-                        <td><strong>ジグザグ暗号</strong></td>
-                        <td>線代用法（換字の一種）</td>
-                        <td>折れ線・座標</td>
-                        <td>アルファベット配列</td>
-                        <td class="difficulty-medium">中</td>
-                        <td>折れ線が暗号文。重複鍵で同音換字</td>
+                        <td><strong data-i18n="table.r1.name">ジグザグ暗号</strong></td>
+                        <td data-i18n="table.classLine">線代用法（換字の一種）</td>
+                        <td data-i18n="table.r1.form">折れ線・座標</td>
+                        <td data-i18n="table.r1.key">アルファベット配列</td>
+                        <td class="difficulty-medium" data-i18n="table.mid">中</td>
+                        <td data-i18n="table.r1.note">折れ線が暗号文。重複鍵で同音換字</td>
                       </tr>
                       <tr>
-                        <td>シーザー暗号</td>
-                        <td>単一換字式</td>
-                        <td>アルファベット</td>
-                        <td>シフト数(1-25)</td>
-                        <td class="difficulty-low">低</td>
-                        <td>最も基本的な換字暗号</td>
+                        <td data-i18n="table.r2.name">シーザー暗号</td>
+                        <td data-i18n="table.classMono">単一換字式</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r2.key">シフト数(1-25)</td>
+                        <td class="difficulty-low" data-i18n="table.low">低</td>
+                        <td data-i18n="table.r2.note">最も基本的な換字暗号</td>
                       </tr>
                       <tr>
-                        <td>単一換字暗号</td>
-                        <td>単一換字式</td>
-                        <td>アルファベット</td>
-                        <td>置換表(26!)</td>
-                        <td class="difficulty-medium">中</td>
-                        <td>頻度分析で解読可能</td>
+                        <td data-i18n="table.r3.name">単一換字暗号</td>
+                        <td data-i18n="table.classMono">単一換字式</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r3.key">置換表(26!)</td>
+                        <td class="difficulty-medium" data-i18n="table.mid">中</td>
+                        <td data-i18n="table.r3.note">頻度分析で解読可能</td>
                       </tr>
                       <tr>
-                        <td>ヴィジュネル暗号</td>
-                        <td>多表式</td>
-                        <td>アルファベット</td>
-                        <td>キーワード</td>
-                        <td class="difficulty-high">高</td>
-                        <td>周期性が弱点</td>
+                        <td data-i18n="table.r4.name">ヴィジュネル暗号</td>
+                        <td data-i18n="table.classPoly">多表式</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r4.key">キーワード</td>
+                        <td class="difficulty-high" data-i18n="table.high">高</td>
+                        <td data-i18n="table.r4.note">周期性が弱点</td>
                       </tr>
                       <tr>
-                        <td>プレイフェア暗号</td>
-                        <td>多字換字式（2文字単位）</td>
-                        <td>アルファベット</td>
-                        <td>5×5格子</td>
-                        <td class="difficulty-high">高</td>
-                        <td>2文字組での暗号化</td>
+                        <td data-i18n="table.r5.name">プレイフェア暗号</td>
+                        <td data-i18n="table.classDigraph">多字換字式（2文字単位）</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r5.key">5×5格子</td>
+                        <td class="difficulty-high" data-i18n="table.high">高</td>
+                        <td data-i18n="table.r5.note">2文字組での暗号化</td>
                       </tr>
                       <tr>
-                        <td>四方暗号</td>
-                        <td>多字換字式（2文字単位）</td>
-                        <td>アルファベット</td>
-                        <td>4つの5×5格子</td>
-                        <td class="difficulty-high">高</td>
-                        <td>プレイフェアの拡張</td>
+                        <td data-i18n="table.r6.name">四方暗号</td>
+                        <td data-i18n="table.classDigraph">多字換字式（2文字単位）</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r6.key">4つの5×5格子</td>
+                        <td class="difficulty-high" data-i18n="table.high">高</td>
+                        <td data-i18n="table.r6.note">プレイフェアの拡張</td>
                       </tr>
                       <tr>
-                        <td>レールフェンス暗号</td>
-                        <td>転置式</td>
-                        <td>アルファベット</td>
-                        <td>レール数</td>
-                        <td class="difficulty-low">低</td>
-                        <td>ジグザグ配置での転置</td>
+                        <td data-i18n="table.r7.name">レールフェンス暗号</td>
+                        <td data-i18n="table.classTrans">転置式</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r7.key">レール数</td>
+                        <td class="difficulty-low" data-i18n="table.low">低</td>
+                        <td data-i18n="table.r7.note">ジグザグ配置での転置</td>
                       </tr>
                       <tr>
-                        <td>縦列転置式暗号</td>
-                        <td>転置式</td>
-                        <td>アルファベット</td>
-                        <td>列順序</td>
-                        <td class="difficulty-medium">中</td>
-                        <td>矩形に書いて列の順で読む転置</td>
+                        <td data-i18n="table.r8.name">縦列転置式暗号</td>
+                        <td data-i18n="table.classTrans">転置式</td>
+                        <td data-i18n="table.formAlpha">アルファベット</td>
+                        <td data-i18n="table.r8.key">列順序</td>
+                        <td class="difficulty-medium" data-i18n="table.mid">中</td>
+                        <td data-i18n="table.r8.note">矩形に書いて列の順で読む転置</td>
                       </tr>
                     </tbody>
                   </table>
@@ -300,21 +346,21 @@
             </div>
           </div>
 
-          <!-- ジグザグ暗号の独自性 -->
+          <!-- ジグザグ暗号の性質 -->
           <div class="accordion-item">
             <h2 class="accordion-title">
               <button class="accordion-header" type="button" data-target="about-uniqueness" aria-expanded="false" aria-controls="about-uniqueness">
-                <span class="accordion-label">ジグザグ暗号の性質</span>
+                <span class="accordion-label" data-i18n="about.propsTitle">ジグザグ暗号の性質</span>
                 <span class="accordion-icon" aria-hidden="true">▶</span>
               </button>
             </h2>
             <div class="accordion-content" id="about-uniqueness">
               <div class="accordion-inner">
                 <ul>
-                  <li>文字ではなく図形（折れ線・座標）を暗号文とする方式のひとつ。踊る人形暗号やピッグペン暗号のように文字を記号に置き換える方式と違い、線のつながりそのものが情報を持つ</li>
-                  <li>重複のない鍵なら、折れ線の各点がどの列にあるかの並び（列番号の列）は<strong>単一換字式暗号の暗号文そのもの</strong>。同じ文字は同じ列に来るので、頻度分析がそのまま効く</li>
-                  <li>鍵に同じ文字を複数置くと、その文字は複数の列のどれかに散る＝同音換字（ホモフォニック）。頻度をならして解読を難しくする古典的な工夫で、表が周期で変わる多表式とは別の仕組み</li>
-                  <li>鍵（文字の並び）が秘密であることが前提。鍵の文字と破線を隠した折れ線だけを渡せば暗号文になる（「SVGをダウンロード」は、鍵を隠しているときは鍵を含めない）</li>
+                  <li data-i18n="about.q1">文字ではなく図形（折れ線・座標）を暗号文とする方式のひとつ。踊る人形暗号やピッグペン暗号のように文字を記号に置き換える方式と違い、線のつながりそのものが情報を持つ</li>
+                  <li><span data-i18n="about.q2a">重複のない鍵なら、折れ線の各点がどの列にあるかの並び（列番号の列）は</span><strong data-i18n="about.q2b">単一換字式暗号の暗号文そのもの</strong><span data-i18n="about.q2c">。同じ文字は同じ列に来るので、頻度分析がそのまま効く</span></li>
+                  <li data-i18n="about.q3">鍵に同じ文字を複数置くと、その文字は複数の列のどれかに散る＝同音換字（ホモフォニック）。頻度をならして解読を難しくする古典的な工夫で、表が周期で変わる多表式とは別の仕組み</li>
+                  <li data-i18n="about.q4">鍵（文字の並び）が秘密であることが前提。鍵の文字と破線を隠した折れ線だけを渡せば暗号文になる（「SVGをダウンロード」は、鍵を隠しているときは鍵を含めない）</li>
                 </ul>
               </div>
             </div>
@@ -326,13 +372,13 @@
 
   <footer class="app-footer">
     <div class="footer">
-      🔗 GitHubリポジトリーはこちら（
-      <a href="https://github.com/ipusiron/zigzag-cipherlab" target="_blank" rel="noopener noreferrer">ipusiron/zigzag-cipherlab</a> ）
+      <span data-i18n="ui.footerPre">🔗 GitHubリポジトリーはこちら（</span><a href="https://github.com/ipusiron/zigzag-cipherlab" target="_blank" rel="noopener noreferrer">ipusiron/zigzag-cipherlab</a><span data-i18n="ui.footerPost">）</span>
     </div>
   </footer>
 
   <script src="js/zz-core.js"></script>
   <script src="js/messages.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

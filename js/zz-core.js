@@ -100,6 +100,22 @@
   // 列の選び方（chooser）: (候補の数, 平文の位置, 文字) → 0 以上 候補の数 未満の番号
   const firstChooser = () => 0;
   const randomChooser = (bytesFn) => (n) => randomIndex(n, bytesFn);
+  // 同じ文字が出るたびに次の列へ回す（同音換字の「同じ文字に別の記号を順に当てる」慣習）。文字ごとの回数を持つ
+  function cycleChooser() {
+    const counters = new Map();
+    return (n, i, ch) => {
+      const c = counters.get(ch) || 0;
+      counters.set(ch, c + 1);
+      return c % n;
+    };
+  }
+  const CHOOSER_IDS = Object.freeze(['random', 'cycle', 'first']);
+  function makeChooser(id, bytesFn) {
+    if (id === 'cycle') return cycleChooser();
+    if (id === 'first') return firstChooser;
+    if (id === 'random') return randomChooser(bytesFn);
+    throw new RangeError(`unknown chooser: ${id}`);
+  }
 
   // 平文の各文字に列を割り当てる。cache（Map）を渡すと、位置ごとに一度選んだ列を保つ（同じ平文は同じ折れ線）。
   // 鍵が変わって選んだ列の文字が違えば選び直す。平文から消えた位置の記録は捨てる
@@ -215,6 +231,58 @@
     return counts;
   }
 
+  // ---- 換字暗号の変装を見せる（解析）----
+  // 点を y の順に並べ、各点が置かれた列の番号の列を返す（折れ線＝列番号の列＝換字暗号の暗号文）
+  function columnSequence(points, keyLen) {
+    const indices = decrypt(points, '').sorted.map((p) => nearestKeyIndex(p.x, keyLen)).filter((i) => i >= 0);
+    return { indices, text: indices.join(' ') };
+  }
+
+  // 列番号を標準のアルファベット（A=0 … Z=25）に写す。26 列を超える鍵では写せないので null
+  function columnLetters(indices, keyLen) {
+    if (!(keyLen > 0) || keyLen > ALPHABET.length) return null;
+    return indices.map((i) => ALPHABET[i]).join('');
+  }
+
+  // 平文の文字ごとの数（encrypt の点の ch から）
+  function letterCounts(points) {
+    const counts = {};
+    for (const p of points) if (p.ch) counts[p.ch] = (counts[p.ch] || 0) + 1;
+    return counts;
+  }
+
+  const FREQUENCY_ANALYZER = 'https://ipusiron.github.io/frequency-analyzer/';
+  // Frequency Analyzer（Day009）へ渡すリンク（#text=。サーバーへ送られず、5,000 文字まで受け取る）
+  const frequencyAnalyzerUrl = (text) => `${FREQUENCY_ANALYZER}#text=${encodeURIComponent(text)}`;
+
+  // ---- 鍵なしで渡す暗号文 ----
+  // 点だけを載せた共有リンク（鍵は含めない）。base はページの URL（? と # を除いたもの）
+  const shareLink = (points, base) => `${base}#points=${encodeURIComponent(pointsToText(points))}`;
+
+  // URL の # から points= を読む。無ければ null。壊れたパーセント符号化はそのまま返す（読み取りで形式の誤りになる）
+  function readPointsFromHash(hash) {
+    const m = /(?:^#|&)points=([^&]*)/.exec(hash || '');
+    if (!m) return null;
+    try {
+      return decodeURIComponent(m[1].replace(/\+/g, '%20'));
+    } catch (e) {
+      return m[1];
+    }
+  }
+
+  // # から points= を取り除いた残り（'' なら # を消してよい）
+  function stripPointsFromHash(hash) {
+    const rest = (hash || '').replace(/^#/, '').split('&').filter((p) => p && !/^points=/.test(p));
+    return rest.length ? `#${rest.join('&')}` : '';
+  }
+
+  // SVG のテキスト（このツールの書き出し）から、最初の折れ線の points 属性を取り出す。無ければ null
+  function pointsFromSvgText(svgText) {
+    if (typeof svgText !== 'string') return null;
+    const m = /<polyline\b[^>]*?\bpoints\s*=\s*"([^"]*)"/.exec(svgText) || /<polyline\b[^>]*?\bpoints\s*=\s*'([^']*)'/.exec(svgText);
+    return m ? m[1].trim() : null;
+  }
+
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // 単体の SVG 文書（ダウンロード用）。showKey が false なら鍵の文字と破線を一切含めない（折れ線と点だけが暗号文）
@@ -249,9 +317,11 @@
   }
 
   root.ZZCore = {
-    ALPHABET, LIMITS, LAYOUT,
+    ALPHABET, LIMITS, LAYOUT, CHOOSER_IDS, FREQUENCY_ANALYZER,
     normalizeKey, keyStats, findAllIndices, colX, rowY, viewBox, prepare,
-    randomIndex, cryptoBytes, firstChooser, randomChooser, choosePositions, encrypt,
+    randomIndex, cryptoBytes, firstChooser, randomChooser, cycleChooser, makeChooser, choosePositions, encrypt,
     pointsToText, parsePoints, nearestKeyIndex, decrypt, shuffle, columnCounts, svgDocument,
+    columnSequence, columnLetters, letterCounts, frequencyAnalyzerUrl,
+    shareLink, readPointsFromHash, stripPointsFromHash, pointsFromSvgText,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
