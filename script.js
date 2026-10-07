@@ -4,6 +4,7 @@
    ========================= */
 
 const ZZ = window.ZZCore;
+const PR = window.ZZPractice;
 const M = window.ZZMessages;
 const I18N = window.ZZI18n;
 const t = (key, vars) => M.t(key, vars);
@@ -29,6 +30,12 @@ const state = {
     stepIndex: 0,
     points: [],       // ソート済み[{x,y}]
     guidesHidden: false,
+  },
+  prac: {
+    quiz: null,       // 出題中の問題（ZZPractice.makeQuiz の戻り値）
+    solved: false,    // この問題で正解（または答えを見た）か
+    score: 0,
+    total: 0,
   }
 };
 
@@ -345,6 +352,96 @@ function loadPointsText(text){
   return { pts, errors };
 }
 
+// --- Practice: 練習問題 ---
+function drawPracticeViz(quiz, showKey){
+  const svg = $('#svgPractice');
+  clearSVG(svg);
+  if(!quiz){ setViewBox(svg, ZZ.viewBox(0, 0)); return; }
+  const vb = ZZ.viewBox(quiz.key.length, quiz.points.length);
+  setViewBox(svg, vb);
+  if(showKey) drawKeyGuides(svg, quiz.key, vb.height);
+  drawPolylineWithPoints(svg, quiz.points);
+}
+
+function practiceSeed(){
+  const v = $('#pracSeed').value;
+  return /^\d+$/.test(String(v).trim()) ? Number(v) : NaN;
+}
+
+function startPractice(){
+  const mode = $('#pracMode').value;
+  const seed = practiceSeed();
+  if(!PR.isValidSeed(seed)){ showNotice($('#pracResult'), t('prac.seedBad')); return; }
+  const quiz = PR.makeQuiz(mode, seed);
+  state.prac.quiz = quiz;
+  state.prac.solved = false;
+  state.prac.total++;
+  $('#pracTotal').textContent = state.prac.total;
+  $('#pracAnswer').value = '';
+  showNotice($('#pracResult'), '');
+  showNotice($('#pracHintText'), '');
+  $('#pracHints').hidden = mode !== 'guess';
+  showPracticeKeyLine();
+  drawPracticeViz(quiz, mode === 'read');
+}
+
+function showPracticeKeyLine(){
+  const q = state.prac.quiz;
+  if(!q){ showNotice($('#pracKeyLine'), ''); return; }
+  showNotice($('#pracKeyLine'), q.mode === 'read' ? t('prac.keyLine', { key: q.key }) : t('prac.keyHidden'));
+}
+
+function checkPractice(){
+  const q = state.prac.quiz;
+  if(!q){ showNotice($('#pracResult'), t('prac.noQuiz')); return; }
+  const r = PR.checkAnswer(q, $('#pracAnswer').value);
+  if(r.correct){
+    if(!state.prac.solved){
+      state.prac.solved = true;
+      state.prac.score++;
+      $('#pracScore').textContent = state.prac.score;
+    }
+    showNotice($('#pracResult'), t('prac.resultOk', { total: r.total }));
+  } else {
+    showNotice($('#pracResult'), t('prac.resultNg', r));
+  }
+}
+
+function revealPractice(){
+  const q = state.prac.quiz;
+  if(!q){ showNotice($('#pracResult'), t('prac.noQuiz')); return; }
+  state.prac.solved = true;  // 答えを見たら、この問題は得点にしない
+  showNotice($('#pracResult'), t('prac.revealText', { plain: q.plain }));
+  if(q.mode === 'guess'){
+    showNotice($('#pracHintText'), t('prac.hintKeyText', { key: q.key }));
+    drawPracticeViz(q, true);
+  }
+}
+
+function practiceHint(level){
+  const q = state.prac.quiz;
+  if(!q){ showNotice($('#pracResult'), t('prac.noQuiz')); return; }
+  let text = '';
+  if(level === 1){
+    const list = PR.frequencyHint(q).map(c => `${c.idx}: ${c.count}`).join(', ');
+    text = t('prac.hintFreqText', { list, order: PR.ENGLISH_ORDER });
+  } else if(level === 2){
+    const list = PR.revealHint(q, 3).map(c => `${c.idx} = ${c.letter} (${c.count})`).join(', ');
+    text = t('prac.hintTopText', { list });
+  } else {
+    text = t('prac.hintKeyText', { key: q.key });
+    drawPracticeViz(q, true);
+  }
+  showNotice($('#pracHintText'), text);
+}
+
+// 問題番号を予測不能な乱数で選ぶ（1〜QUIZ_MAX_SEED）
+function randomSeed(){
+  const b = randomBytes(4);
+  const v = ((b[0] << 24) >>> 0) + (b[1] << 16) + (b[2] << 8) + b[3];
+  return (v % PR.QUIZ_MAX_SEED) + 1;
+}
+
 // --- Analyze: 折れ線は換字暗号の変装 ---
 function drawAnalyze(){
   const result = encryptCurrent();
@@ -477,6 +574,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     showDecError([]);
     setKey(state.key);
     if($('#tab-analyze').classList.contains('active')) drawAnalyze();
+    showPracticeKeyLine();
+    showNotice($('#pracResult'), '');
+    showNotice($('#pracHintText'), '');
   });
 
   // アコーディオン機能
@@ -579,6 +679,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
     clearInterval(state.enc.timer); state.enc.timer = null;
     drawEncryptViz();
   });
+
+  // 練習タブ
+  $('#btnPracStart').addEventListener('click', startPractice);
+  $('#btnPracRandom').addEventListener('click', ()=>{ $('#pracSeed').value = String(randomSeed()); });
+  $('#btnPracCheck').addEventListener('click', checkPractice);
+  $('#btnPracReveal').addEventListener('click', revealPractice);
+  $('#btnHintFreq').addEventListener('click', ()=>practiceHint(1));
+  $('#btnHintTop').addEventListener('click', ()=>practiceHint(2));
+  $('#btnHintKey').addEventListener('click', ()=>practiceHint(3));
+  $('#pracMode').addEventListener('change', ()=>{ $('#pracHints').hidden = $('#pracMode').value !== 'guess' || !state.prac.quiz; });
 
   // 解析タブ: 文字列のコピー
   $('#btnAnaCopy').addEventListener('click', ()=>{
