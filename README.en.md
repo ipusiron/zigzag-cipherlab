@@ -260,11 +260,13 @@ zigzag-cipherlab/
 │   └── screenshot5.png     # Analyze tab (Atbash with a reversed key)
 ├── js/                     # Scripts loaded by the page
 │   ├── zz-core.js          # Computation core (no DOM: encryption, decryption, points, SVG document, analysis)
+│   ├── zz-practice.js      # Practice core (same quiz for each number, answer check, hints)
 │   ├── messages.js         # Interface strings (Japanese and English)
 │   └── i18n.js             # Language selection and static text replacement
 ├── test/                   # Automated tests (node --test)
 │   ├── load.js             # Helper that loads js/*.js into the tests
 │   ├── core.test.js        # Core tests (known answers, round trips, limits, randomness, SVG, analysis, share link)
+│   ├── practice.test.js    # Practice tests (determinism, round trip, answer check, hints)
 │   ├── html.test.js        # Static checks of index.html (CSP, aria, script order)
 │   ├── contrast.test.js    # Color contrast (dark and light)
 │   ├── format.test.js      # Line length, line count, where strings live

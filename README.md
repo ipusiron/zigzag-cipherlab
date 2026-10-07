@@ -298,11 +298,13 @@ zigzag-cipherlab/
 │   └── screenshot5.png     # 解析タブ（逆順の鍵でアトバシュ）
 ├── js/                     # 画面から読み込むスクリプト
 │   ├── zz-core.js          # 計算部（DOMなし。暗号化・復号・点の読み書き・SVG文書・解析）
+│   ├── zz-practice.js      # 練習問題の計算部（問題番号ごとに同じ問題・答え合わせ・ヒント）
 │   ├── messages.js         # 画面の文言（日本語・英語）
 │   └── i18n.js             # 言語の決定と静的な文言の差し替え
 ├── test/                   # 自動テスト（node --test）
 │   ├── load.js             # テストから js/*.js を読み込む補助
 │   ├── core.test.js        # 計算部のテスト（既知解答・往復・上限・乱数・SVG・解析・共有リンク）
+│   ├── practice.test.js    # 練習問題のテスト（決定性・往復・答え合わせ・ヒント）
 │   ├── html.test.js        # index.html の静的検証（CSP・aria・読み込み順）
 │   ├── contrast.test.js    # 配色のコントラスト（ダーク・ライト）
 │   ├── format.test.js      # 行長・行数・文言の置き場所
