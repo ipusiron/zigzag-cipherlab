@@ -26,6 +26,19 @@
     'dec.emptyKey': '鍵が空なので復号できません。鍵生成タブで鍵を設定してください。',
     'svg.fileWithKey': 'zigzag-cipher-with-key.svg',
     'svg.fileNoKey': 'zigzag-cipher.svg',
+    'png.fileWithKey': 'zigzag-cipher-with-key.png',
+    'png.fileNoKey': 'zigzag-cipher.png',
+    'png.fail': 'PNGの書き出しに失敗しました。',
+    'share.ok': '共有リンクをコピーしました（鍵は含まれません）。',
+    'share.fail': '共有リンクのコピーに失敗しました。',
+    'dec.noPolyline': 'SVGに折れ線（polyline）が見つかりません。このツールで書き出したSVGを選んでください。',
+    'dec.loaded': 'SVGから{count}点を読み込みました。「復号」を押してください。',
+    'dec.loadFail': 'ファイルを読み込めませんでした。',
+    'dec.sharedLoaded': '共有リンクから{count}点を読み込みました。鍵を設定して「復号」を押してください。',
+    'ana.noPoints': '暗号化タブに平文がありません。平文を入れると、ここに列番号の列が出ます。',
+    'ana.tooManyColumns': '鍵が27列以上なので、標準のアルファベットには写せません。列番号の列をお使いください。',
+    'ana.rowLetters': '平文の文字',
+    'ana.rowColumns': '折れ線の列',
   };
 
   const MESSAGES = { ja };

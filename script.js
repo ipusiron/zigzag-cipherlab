@@ -6,9 +6,9 @@
 const ZZ = window.ZZCore;
 const M = window.ZZMessages;
 const t = (key, vars) => M.t(key, vars);
-// 重複鍵の列の選択とシャッフルは予測不能な乱数（crypto.getRandomValues）で行う
+// 重複鍵の列の選択とシャッフルは予測不能な乱数（crypto.getRandomValues）で行う。選び方は #dupMode で切り替える
 const randomBytes = ZZ.cryptoBytes(window.crypto);
-const chooser = ZZ.randomChooser(randomBytes);
+let chooser = ZZ.makeChooser('random', randomBytes);
 
 // --- State ---
 const state = {
@@ -56,6 +56,7 @@ function activateTab(btn){
   btn.removeAttribute('tabindex');
   $('#'+btn.dataset.tab).classList.add('active');
   if(wasRunning){ drawEncryptViz(); drawDecryptViz(); }
+  if(btn.dataset.tab === 'tab-analyze') drawAnalyze();
   // 表示されたパネルの図を枠の幅に合わせ直す
   $$('.panel.active .viz').forEach(fitSVG);
 }
@@ -279,11 +280,130 @@ function downloadSVG(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
+// 単体の PNG を書き出す（SVG 文書を data: URL の画像にして canvas に描く。鍵の有無は SVG と同じ）
+function downloadPNG(){
+  const showKey = !state.enc.guidesHidden;
+  const source = ZZ.svgDocument({ key: state.key, points: state.enc.lastPoints, showKey });
+  const vb = ZZ.viewBox(state.key.length, state.enc.lastPoints.length);
+  // 大きすぎる canvas を避ける（1辺 16,000px・面積 1 億 px まで）
+  let scale = Math.min(2, 16000 / Math.max(vb.width, vb.height));
+  scale = Math.min(scale, Math.sqrt(1e8 / (vb.width * vb.height)));
+  const img = new Image();
+  img.onload = ()=>{
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vb.width * scale);
+      canvas.height = Math.round(vb.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob)=>{
+        if(!blob){ flashExportMsg(t('png.fail')); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = t(showKey ? 'png.fileWithKey' : 'png.fileNoKey'); a.click();
+        setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      }, 'image/png');
+    } catch(e) {
+      flashExportMsg(t('png.fail'));
+    }
+  };
+  img.onerror = ()=>flashExportMsg(t('png.fail'));
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(source);
+}
+
+// 鍵を含まない共有リンク（#points=）をコピーする
+function pageBase(){
+  return location.href.split('#')[0].split('?')[0];
+}
+function copyShareLink(){
+  if(state.enc.lastPoints.length === 0){ flashExportMsg(t('copy.empty')); return; }
+  const link = ZZ.shareLink(state.enc.lastPoints, pageBase());
+  const clip = navigator.clipboard;
+  if(!clip){ flashExportMsg(t('share.fail')); return; }
+  clip.writeText(link).then(()=>flashExportMsg(t('share.ok'))).catch(()=>flashExportMsg(t('share.fail')));
+}
+
 // --- Show/hide error message ---
 function showDecError(errors){
   const errorDiv = $('#decErrorMsg');
   const text = errors.map(e => t('dec.' + e.code, e)).join(' / ');
   showNotice(errorDiv, text);
+}
+
+// 復号タブに点のテキストを入れて描く（共有リンク・SVG の読み込みから）
+function loadPointsText(text){
+  $('#pointsInput').value = text;
+  const { pts, errors } = ZZ.parsePoints(text);
+  showDecError(errors);
+  $('#decodedOutput').value = '';
+  if(errors.length === 0){ state.dec.points = pts; drawDecryptViz(); }
+  return { pts, errors };
+}
+
+// --- Analyze: 折れ線は換字暗号の変装 ---
+function drawAnalyze(){
+  const result = encryptCurrent();
+  const keyLen = state.key.length;
+  const st = ZZ.keyStats(state.key);
+  $('#anaKeyLen').textContent = st.len;
+  $('#anaDup').textContent = st.dup;
+  $('#anaPoints').textContent = result.points.length;
+  const seq = ZZ.columnSequence(result.points, keyLen);
+  const letters = ZZ.columnLetters(seq.indices, keyLen);
+  $('#anaIndices').value = seq.text;
+  $('#anaLetters').value = letters || '';
+  const link = $('#lnkFreq');
+  let notice = '';
+  if(result.points.length === 0) notice = t('ana.noPoints');
+  else if(letters === null) notice = t('ana.tooManyColumns');
+  showNotice($('#anaNotice'), notice);
+  if(letters){
+    link.href = ZZ.frequencyAnalyzerUrl(letters);
+    link.removeAttribute('aria-disabled');
+  } else {
+    link.href = ZZ.FREQUENCY_ANALYZER;
+    link.setAttribute('aria-disabled', 'true');
+  }
+  drawAnalyzeChart(result.points, keyLen);
+}
+
+// 上段: 平文の文字ごとの数（標準のアルファベットの位置）、下段: 折れ線の列ごとの数（鍵の列の位置）
+function drawAnalyzeChart(points, keyLen){
+  const svg = $('#svgAnalyze');
+  clearSVG(svg);
+  const width = ZZ.viewBox(Math.max(keyLen, ZZ.ALPHABET.length), 0).width;
+  const height = 440;
+  setViewBox(svg, { width, height });
+  const letterCounts = ZZ.letterCounts(points);
+  const colCounts = ZZ.columnCounts(points, keyLen);
+  const max = Math.max(1, ...Object.values(letterCounts), ...colCounts);
+  const barW = 24;
+  const rows = [
+    { labelKey: 'ana.rowLetters', baseY: 190, barH: 120, cls: 'bar letters',
+      items: [...ZZ.ALPHABET].map((ch, i) => ({ x: colX(i), label: ch, count: letterCounts[ch] || 0 })) },
+    { labelKey: 'ana.rowColumns', baseY: 410, barH: 120, cls: 'bar columns',
+      items: [...state.key].map((ch, i) => ({ x: colX(i), label: ch, count: colCounts[i] || 0 })) },
+  ];
+  for(const row of rows){
+    const title = elSVG('text', { x: ZZ.LAYOUT.marginX - 20, y: row.baseY - row.barH - 24, class: 'bar-title' });
+    title.textContent = t(row.labelKey);
+    svg.appendChild(title);
+    svg.appendChild(elSVG('line', { x1: ZZ.LAYOUT.marginX - 20, y1: row.baseY, x2: width - 20, y2: row.baseY, class: 'bar-axis' }));
+    for(const it of row.items){
+      const h = Math.round(row.barH * it.count / max);
+      if(it.count > 0){
+        svg.appendChild(elSVG('rect', { x: it.x - barW/2, y: row.baseY - h, width: barW, height: h, rx: 3, class: row.cls }));
+        const c = elSVG('text', { x: it.x, y: row.baseY - h - 4, class: 'bar-count', 'text-anchor': 'middle' });
+        c.textContent = String(it.count);
+        svg.appendChild(c);
+      }
+      const l = elSVG('text', { x: it.x, y: row.baseY + 18, class: 'bar-label', 'text-anchor': 'middle' });
+      l.textContent = it.label;
+      svg.appendChild(l);
+    }
+  }
 }
 
 /* =========================
@@ -431,6 +551,58 @@ document.addEventListener('DOMContentLoaded', ()=>{
   $('#btnDownloadSVG').addEventListener('click', ()=>{
     downloadSVG();
   });
+  $('#btnDownloadPNG').addEventListener('click', ()=>{
+    if(state.enc.lastPoints.length === 0){ flashExportMsg(t('copy.empty')); return; }
+    downloadPNG();
+  });
+  $('#btnShareLink').addEventListener('click', copyShareLink);
+
+  // 重複鍵の列の選び方。変えたら位置ごとの記録を捨てて描き直す
+  $('#dupMode').addEventListener('change', ()=>{
+    const id = $('#dupMode').value;
+    chooser = ZZ.makeChooser(ZZ.CHOOSER_IDS.includes(id) ? id : 'random', randomBytes);
+    state.enc.selectedIndices.clear();
+    clearInterval(state.enc.timer); state.enc.timer = null;
+    drawEncryptViz();
+  });
+
+  // 解析タブ: 文字列のコピー
+  $('#btnAnaCopy').addEventListener('click', ()=>{
+    const text = $('#anaLetters').value || $('#anaIndices').value;
+    const msg = $('#anaMsg');
+    const flash = (s)=>{ msg.textContent = s; setTimeout(()=>msg.textContent='', 1400); };
+    if(!text){ flash(t('copy.empty')); return; }
+    const clip = navigator.clipboard;
+    if(!clip){ flash(t('copy.fail')); return; }
+    clip.writeText(text).then(()=>flash(t('copy.ok'))).catch(()=>flash(t('copy.fail')));
+  });
+
+  // 復号タブ: SVG から読み込む
+  $('#btnLoadSvg').addEventListener('click', ()=>$('#svgFile').click());
+  $('#svgFile').addEventListener('change', ()=>{
+    const input = $('#svgFile');
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const text = ZZ.pointsFromSvgText(String(reader.result));
+      if(text === null){ showDecError([{ code: 'noPolyline' }]); return; }
+      const { pts, errors } = loadPointsText(text);
+      if(errors.length === 0) showDecError([{ code: 'loaded', count: pts.length }]);
+    };
+    reader.onerror = ()=>showDecError([{ code: 'loadFail' }]);
+    reader.readAsText(file);
+    input.value = '';
+  });
+
+  // 共有リンク（#points=）から点を読み込む。読み込んだら URL から消す
+  const shared = ZZ.readPointsFromHash(location.hash);
+  if(shared !== null){
+    const { pts, errors } = loadPointsText(shared);
+    if(errors.length === 0 && pts.length > 0) showDecError([{ code: 'sharedLoaded', count: pts.length }]);
+    activateTab($('#tab-btn-dec'));
+    try { history.replaceState(history.state, '', location.pathname + location.search + ZZ.stripPointsFromHash(location.hash)); } catch(e) { /* 変えられなくても動く */ }
+  }
 
   // 復号
   // Toggle key visibility in decryption tab

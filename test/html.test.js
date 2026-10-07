@@ -44,6 +44,8 @@ test('主要な要素の id がそろっている', () => {
     'btnEncClear', 'btnEncStepPlay', 'btnEncStepStop', 'svgEncrypt',
     'pointsInput', 'decErrorMsg', 'chkShowKeyDec', 'btnSyncFromEnc', 'btnDecode', 'decodedOutput', 'btnDecClear', 'btnDecStepPlay', 'btnDecStepStop',
     'svgDecrypt', 'about-basic', 'about-comparison', 'about-uniqueness',
+    'dupMode', 'btnDownloadPNG', 'btnShareLink', 'btnLoadSvg', 'svgFile',
+    'anaKeyLen', 'anaDup', 'anaPoints', 'anaNotice', 'anaIndices', 'anaLetters', 'btnAnaCopy', 'lnkFreq', 'anaMsg', 'svgAnalyze',
   ];
   for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
 });
@@ -52,7 +54,7 @@ test('タブとパネルが id で結ばれている（role・aria-controls・ar
   const re = new RegExp('<button class="tab[^"]*" id="tab-btn-(\\w+)" type="button" role="tab" '
     + 'data-tab="tab-(\\w+)"[^>]*aria-controls="tab-(\\w+)"', 'g');
   const tabs = [...html.matchAll(re)];
-  assert.equal(tabs.length, 4);
+  assert.equal(tabs.length, 5);
   for (const [, btnKey, dataKey, panelKey] of tabs) {
     assert.equal(btnKey, dataKey);
     assert.equal(btnKey, panelKey);
@@ -82,11 +84,12 @@ test('図は viz-wrap の中にあり、読み上げ用の名前がある', () =
     + 'width="1200" height="600" role="img" aria-label="[^"]+"></svg>', 'g');
   const svgs = [...html.matchAll(re)];
   assert.deepEqual(svgs.map((m) => m[1]), ['svgKeyPreview', 'svgEncrypt', 'svgDecrypt']);
+  assert.match(html, /<div class="viz-wrap">\s*<svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="[^"]+">/);
 });
 
 test('ボタンは type="button"、知らせの要素は aria-live', () => {
   for (const m of html.matchAll(/<button [^>]*>/g)) assert.match(m[0], /type="button"/, m[0]);
-  for (const id of ['keyNotice', 'encNotice', 'decErrorMsg', 'exportMsg']) {
+  for (const id of ['keyNotice', 'encNotice', 'decErrorMsg', 'exportMsg', 'anaNotice', 'anaMsg']) {
     assert.ok(new RegExp(`id="${id}"[^>]*aria-live="polite"`).test(html), `${id} に aria-live がない`);
   }
 });
@@ -99,10 +102,19 @@ test('noscript と viewport と lang がある', () => {
 
 test('外部への読み込みがない（同一オリジンだけ）。外部リンクに rel="noopener noreferrer"', () => {
   const urls = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
-  for (const u of urls) assert.ok(u.startsWith('https://github.com/'), u);
+  for (const u of urls) assert.ok(u.startsWith('https://github.com/') || u.startsWith('https://ipusiron.github.io/'), u);
+  // 解析タブの Frequency Analyzer へのリンク（新しいタブで開く。鍵は渡さない）
+  assert.match(html, /<a id="lnkFreq" class="btn primary link-btn" href="https:\/\/ipusiron\.github\.io\/frequency-analyzer\/" target="_blank" rel="noopener noreferrer">/);
   assert.doesNotMatch(html, /<link[^>]+href="https?:\/\//);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//);
   for (const m of html.matchAll(/<a [^>]*href="https?:\/\/[^"]+"[^>]*>/g)) assert.match(m[0], /rel="noopener noreferrer"/, m[0]);
+});
+
+test('重複鍵の選び方の select は計算部の id と同じ値を持つ', () => {
+  const values = [...html.matchAll(/<option value="(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(values, ['random', 'cycle', 'first']);
+  assert.match(html, /<select id="dupMode" class="select">/);
+  assert.match(html, /<input type="file" id="svgFile" accept="\.svg,image\/svg\+xml" hidden \/>/);
 });
 
 test('リード文は現行の仕様（「鍵を表示」を OFF にすると折れ線だけになる）', () => {

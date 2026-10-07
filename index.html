@@ -30,6 +30,7 @@
       <button class="tab active" id="tab-btn-key" type="button" role="tab" data-tab="tab-key" aria-selected="true" aria-controls="tab-key">鍵生成</button>
       <button class="tab" id="tab-btn-enc" type="button" role="tab" data-tab="tab-enc" aria-selected="false" aria-controls="tab-enc" tabindex="-1">暗号化</button>
       <button class="tab" id="tab-btn-dec" type="button" role="tab" data-tab="tab-dec" aria-selected="false" aria-controls="tab-dec" tabindex="-1">復号</button>
+      <button class="tab" id="tab-btn-analyze" type="button" role="tab" data-tab="tab-analyze" aria-selected="false" aria-controls="tab-analyze" tabindex="-1">解析</button>
       <button class="tab" id="tab-btn-about" type="button" role="tab" data-tab="tab-about" aria-selected="false" aria-controls="tab-about" tabindex="-1">座学</button>
     </nav>
 
@@ -84,6 +85,13 @@
             <span>鍵を表示</span>
           </label>
 
+          <label class="label" for="dupMode">重複鍵の列の選び方</label>
+          <select id="dupMode" class="select">
+            <option value="random" selected>ランダム（予測不能な乱数）</option>
+            <option value="cycle">順番に回す（同じ文字が出るたびに次の列）</option>
+            <option value="first">最初の列（重複を使わない）</option>
+          </select>
+
           <div class="button-row">
             <button id="btnEncrypt" class="btn primary" type="button">暗号化</button>
           </div>
@@ -94,11 +102,13 @@
           <div class="export-row">
             <button id="btnExportPoints" class="btn" type="button">折れ線ポイントをコピー</button>
             <button id="btnDownloadSVG" class="btn" type="button">SVGをダウンロード</button>
-            <span id="exportMsg" class="msg" aria-live="polite"></span>
+            <button id="btnDownloadPNG" class="btn" type="button">PNGをダウンロード</button>
+            <button id="btnShareLink" class="btn" type="button">共有リンクをコピー（鍵なし）</button>
           </div>
+          <span id="exportMsg" class="msg" aria-live="polite"></span>
 
           <p class="hint">
-            ※ 重複鍵がある場合は暗号化時にランダム選択されます。鍵を隠してダウンロードしたSVGには、鍵の文字と破線は含まれません。
+            ※ 鍵を隠してダウンロードしたSVG・PNGと共有リンクには、鍵の文字と破線は含まれません。受け取った側は復号タブで読み込めます。
           </p>
 
           <div class="danger-zone">
@@ -139,6 +149,8 @@
 
           <div class="button-row">
             <button id="btnSyncFromEnc" class="btn" type="button">暗号化タブから同期</button>
+            <button id="btnLoadSvg" class="btn" type="button">SVGから読み込む</button>
+            <input type="file" id="svgFile" accept=".svg,image/svg+xml" hidden />
           </div>
 
           <div class="button-row">
@@ -169,6 +181,47 @@
           </div>
           <div class="viz-wrap">
             <svg id="svgDecrypt" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="復号ビジュアライザー"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解析（折れ線は換字暗号の変装） -->
+    <section id="tab-analyze" class="panel" role="tabpanel" aria-labelledby="tab-btn-analyze">
+      <div class="two-col">
+        <div class="controls">
+          <h2 class="section-title">折れ線は換字暗号の変装</h2>
+          <p class="hint">
+            暗号化タブの平文と鍵から、折れ線の各点がどの列にあるかを数えます。重複のない鍵なら、列番号の列は単一換字式暗号の暗号文そのものです。
+          </p>
+          <div class="stats">
+            <div>鍵の長さ：<span id="anaKeyLen">26</span></div>
+            <div>重複数：<span id="anaDup">0</span></div>
+            <div>点の数：<span id="anaPoints">0</span></div>
+          </div>
+          <p id="anaNotice" class="notice" aria-live="polite" hidden></p>
+
+          <label class="label" for="anaIndices">列番号の列（yの順、0始まり）</label>
+          <textarea id="anaIndices" class="textarea mono" rows="3" readonly></textarea>
+
+          <label class="label" for="anaLetters">列番号を標準のアルファベット（A=0…Z=25）に写した文字列</label>
+          <textarea id="anaLetters" class="textarea mono" rows="3" readonly></textarea>
+
+          <div class="button-row">
+            <button id="btnAnaCopy" class="btn" type="button">文字列をコピー</button>
+            <a id="lnkFreq" class="btn primary link-btn" href="https://ipusiron.github.io/frequency-analyzer/" target="_blank" rel="noopener noreferrer">Frequency Analyzerで頻度分析</a>
+          </div>
+          <span id="anaMsg" class="msg" aria-live="polite"></span>
+
+          <p class="hint">
+            ※ 既定の鍵（ABC…Z）では列番号がそのまま文字なので、写した文字列は平文と同じです。鍵をシャッフルすると単一換字式暗号の暗号文になり、鍵に同じ文字を複数置くと列ごとの数がならされます。
+          </p>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header">文字ごとの数（上：平文の文字、下：折れ線の列）</div>
+          <div class="viz-wrap">
+            <svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="文字ごとの数と列ごとの数"></svg>
           </div>
         </div>
       </div>
