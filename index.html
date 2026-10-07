@@ -34,6 +34,7 @@
       <button class="tab" id="tab-btn-enc" type="button" role="tab" data-tab="tab-enc" aria-selected="false" aria-controls="tab-enc" tabindex="-1" data-i18n="ui.tabEnc">暗号化</button>
       <button class="tab" id="tab-btn-dec" type="button" role="tab" data-tab="tab-dec" aria-selected="false" aria-controls="tab-dec" tabindex="-1" data-i18n="ui.tabDec">復号</button>
       <button class="tab" id="tab-btn-analyze" type="button" role="tab" data-tab="tab-analyze" aria-selected="false" aria-controls="tab-analyze" tabindex="-1" data-i18n="ui.tabAnalyze">解析</button>
+      <button class="tab" id="tab-btn-practice" type="button" role="tab" data-tab="tab-practice" aria-selected="false" aria-controls="tab-practice" tabindex="-1" data-i18n="ui.tabPractice">練習</button>
       <button class="tab" id="tab-btn-about" type="button" role="tab" data-tab="tab-about" aria-selected="false" aria-controls="tab-about" tabindex="-1" data-i18n="ui.tabAbout">座学</button>
     </nav>
 
@@ -222,6 +223,53 @@
       </div>
     </section>
 
+    <!-- 練習 -->
+    <section id="tab-practice" class="panel" role="tabpanel" aria-labelledby="tab-btn-practice">
+      <div class="two-col">
+        <div class="controls">
+          <h2 class="section-title" data-i18n="prac.title">練習問題</h2>
+          <p class="hint" data-i18n="prac.intro">問題番号ごとに同じ問題が出ます。授業などで同じ問題を解くときは、番号を伝えてください。「鍵なし」では、解析タブと同じ考え方（列ごとの点の数）で鍵を推理します。</p>
+          <label class="label" for="pracMode" data-i18n="prac.modeLabel">モード</label>
+          <select id="pracMode" class="select">
+            <option value="read" selected data-i18n="prac.modeRead">鍵つきで折れ線を読む（短い英文）</option>
+            <option value="guess" data-i18n="prac.modeGuess">鍵なしで頻度から当てる（長い英文）</option>
+          </select>
+          <label class="label" for="pracSeed" data-i18n="prac.seedLabel">問題番号（1〜999999）</label>
+          <div class="button-row">
+            <input id="pracSeed" class="input-number" type="number" min="1" max="999999" step="1" value="1" />
+            <button id="btnPracRandom" class="btn" type="button" data-i18n="prac.random">番号をランダムに</button>
+            <button id="btnPracStart" class="btn primary" type="button" data-i18n="prac.start">出題</button>
+          </div>
+          <p id="pracKeyLine" class="notice mono" aria-live="polite" hidden></p>
+          <div id="pracHints" hidden>
+            <div class="button-row">
+              <button id="btnHintFreq" class="btn" type="button" data-i18n="prac.hintFreq">ヒント1：列の頻度</button>
+              <button id="btnHintTop" class="btn" type="button" data-i18n="prac.hintTop">ヒント2：上位3列の文字</button>
+              <button id="btnHintKey" class="btn" type="button" data-i18n="prac.hintKey">ヒント3：鍵を見る</button>
+            </div>
+            <p id="pracHintText" class="notice mono" aria-live="polite" hidden></p>
+          </div>
+          <label class="label" for="pracAnswer" data-i18n="prac.answerLabel">平文（英字だけを見ます。空白や記号は自由）</label>
+          <textarea id="pracAnswer" class="textarea" rows="3"></textarea>
+          <div class="button-row">
+            <button id="btnPracCheck" class="btn primary" type="button" data-i18n="prac.check">答え合わせ</button>
+            <button id="btnPracReveal" class="btn" type="button" data-i18n="prac.reveal">答えを見る</button>
+          </div>
+          <p id="pracResult" class="notice" aria-live="polite" hidden></p>
+          <div class="stats">
+            <div><span data-i18n="prac.score">正解：</span><span id="pracScore">0</span><span data-i18n="prac.scoreSep"> / </span><span id="pracTotal">0</span></div>
+          </div>
+        </div>
+
+        <div class="viz-card">
+          <div class="viz-header" data-i18n="prac.vizHeader">問題の折れ線</div>
+          <div class="viz-wrap">
+            <svg id="svgPractice" class="viz" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="練習の折れ線" data-i18n-attr="aria-label:prac.vizAria"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 座学 -->
     <section id="tab-about" class="panel" role="tabpanel" aria-labelledby="tab-btn-about">
       <article class="doc">
@@ -377,6 +425,7 @@
   </footer>
 
   <script src="js/zz-core.js"></script>
+  <script src="js/zz-practice.js"></script>
   <script src="js/messages.js"></script>
   <script src="js/i18n.js"></script>
   <script src="script.js"></script>

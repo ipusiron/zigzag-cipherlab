@@ -34,7 +34,7 @@ test('インラインのイベントハンドラーと style 属性がない', (
 
 test('スクリプトは計算部・文言・画面の順に読み込む', () => {
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepEqual(srcs, ['js/zz-core.js', 'js/messages.js', 'js/i18n.js', 'script.js']);
+  assert.deepEqual(srcs, ['js/zz-core.js', 'js/zz-practice.js', 'js/messages.js', 'js/i18n.js', 'script.js']);
 });
 
 test('主要な要素の id がそろっている', () => {
@@ -46,6 +46,8 @@ test('主要な要素の id がそろっている', () => {
     'svgDecrypt', 'about-basic', 'about-comparison', 'about-uniqueness',
     'dupMode', 'btnDownloadPNG', 'btnShareLink', 'btnLoadSvg', 'svgFile',
     'anaKeyLen', 'anaDup', 'anaPoints', 'anaNotice', 'anaIndices', 'anaLetters', 'btnAnaCopy', 'lnkFreq', 'anaMsg', 'svgAnalyze',
+    'pracMode', 'pracSeed', 'btnPracRandom', 'btnPracStart', 'pracKeyLine', 'pracHints', 'btnHintFreq', 'btnHintTop', 'btnHintKey',
+    'pracHintText', 'pracAnswer', 'btnPracCheck', 'btnPracReveal', 'pracResult', 'pracScore', 'pracTotal', 'svgPractice',
   ];
   for (const id of ids) assert.ok(html.includes(`id="${id}"`), `id="${id}" がない`);
 });
@@ -54,7 +56,7 @@ test('タブとパネルが id で結ばれている（role・aria-controls・ar
   const re = new RegExp('<button class="tab[^"]*" id="tab-btn-(\\w+)" type="button" role="tab" '
     + 'data-tab="tab-(\\w+)"[^>]*aria-controls="tab-(\\w+)"', 'g');
   const tabs = [...html.matchAll(re)];
-  assert.equal(tabs.length, 5);
+  assert.equal(tabs.length, 6);
   for (const [, btnKey, dataKey, panelKey] of tabs) {
     assert.equal(btnKey, dataKey);
     assert.equal(btnKey, panelKey);
@@ -83,13 +85,13 @@ test('図は viz-wrap の中にあり、読み上げ用の名前がある', () =
   const re = new RegExp('<div class="viz-wrap">\\s*<svg id="(\\w+)" class="viz" viewBox="0 0 1200 600" '
     + 'width="1200" height="600" role="img" aria-label="[^"]+" data-i18n-attr="aria-label:[\\w.]+"></svg>', 'g');
   const svgs = [...html.matchAll(re)];
-  assert.deepEqual(svgs.map((m) => m[1]), ['svgKeyPreview', 'svgEncrypt', 'svgDecrypt']);
+  assert.deepEqual(svgs.map((m) => m[1]), ['svgKeyPreview', 'svgEncrypt', 'svgDecrypt', 'svgPractice']);
   assert.match(html, /<div class="viz-wrap">\s*<svg id="svgAnalyze" class="viz" viewBox="0 0 1200 440" width="1200" height="440" role="img" aria-label="[^"]+"[^>]*>/);
 });
 
 test('ボタンは type="button"、知らせの要素は aria-live', () => {
   for (const m of html.matchAll(/<button [^>]*>/g)) assert.match(m[0], /type="button"/, m[0]);
-  for (const id of ['keyNotice', 'encNotice', 'decErrorMsg', 'exportMsg', 'anaNotice', 'anaMsg']) {
+  for (const id of ['keyNotice', 'encNotice', 'decErrorMsg', 'exportMsg', 'anaNotice', 'anaMsg', 'pracKeyLine', 'pracHintText', 'pracResult']) {
     assert.ok(new RegExp(`id="${id}"[^>]*aria-live="polite"`).test(html), `${id} に aria-live がない`);
   }
 });
@@ -112,7 +114,8 @@ test('外部への読み込みがない（同一オリジンだけ）。外部�
 
 test('重複鍵の選び方の select は計算部の id と同じ値を持つ', () => {
   const values = [...html.matchAll(/<option value="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(values, ['random', 'cycle', 'first']);
+  assert.deepEqual(values, ['random', 'cycle', 'first', 'read', 'guess']);
+  assert.match(html, /<input id="pracSeed" class="input-number" type="number" min="1" max="999999" step="1" value="1" \/>/);
   assert.match(html, /<select id="dupMode" class="select">/);
   assert.match(html, /<input type="file" id="svgFile" accept="\.svg,image\/svg\+xml" hidden \/>/);
 });

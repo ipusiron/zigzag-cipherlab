@@ -42,6 +42,9 @@ Try it directly in your browser.
 >![Analyze tab showing column numbers and the mapped text for HAPPY HACKING with a reversed key](assets/en/screenshot5.png)
 >*Analyze tab. With the key reversed (ZYX…A), the column numbers mapped to the standard alphabet become an Atbash ciphertext. The polyline is a substitution cipher in disguise*
 
+>![Practice tab: reading the polyline of problem 1 with the key and checking the answer](assets/en/screenshot6.png)
+>*Practice tab. Problem 1 (read with the key): the polyline is read, the plaintext typed in and checked*
+
 ---
 
 ## 🔐 What is the Zigzag Cipher?
@@ -88,6 +91,7 @@ The properties of the Zigzag Cipher are as follows.
 - Step play: animate encryption and decryption one letter at a time. For long texts the box follows the current point
 - Decrypt: enter the polyline points (or sync them from the Encrypt tab) and they are walked in y order and mapped back to the nearest key column. Invalid formats, negative coordinates and limit violations are reported with their position. Points can also be loaded from an exported SVG or a share link
 - Analyze: count which column each point falls in, show the sequence of column numbers and the same sequence mapped to the standard alphabet. Bar charts compare the counts of plaintext letters with the counts of polyline columns, and the mapped text can be sent to Frequency Analyzer (Day009)
+- Practice: each problem number gives the same problem. Read the polyline of a short English text with the key, or guess a long English text without the key from the column counts (three hint levels: column counts, letters of the top 3 columns, the key). Checking shows how many letters match in position and keeps a score
 - Export: copy the points, download SVG or PNG (with or without the key), copy a share link that contains no key
 - Long keys and long texts: the figure grows in width with the key and in height with the text and scrolls inside its box. It is not squeezed, so the letters stay the same size
 - Learn: classification, origin and properties of the Zigzag Cipher, and a comparison table of classical ciphers
@@ -104,6 +108,7 @@ The properties of the Zigzag Cipher are as follows.
 5. Press "Decrypt" to decrypt at once, or "Step play" to walk the points one by one
 6. The recovered text is shown in lowercase (the classical convention)
 7. In the Analyze tab, confirm that the polyline is a substitution cipher in disguise. Send the mapped text to "Analyze in Frequency Analyzer" to analyze it as a monoalphabetic substitution cipher
+8. In the Practice tab, choose a problem number and press "New problem". "With the key" means reading the polyline against the key shown in the figure; "without the key" means working out the key by comparing the column counts with English letter frequencies. Share the number when a class solves the same problem
 
 ### Example: encrypting HELLOWORLD with the default key
 
@@ -172,6 +177,14 @@ Enter these points in the Decrypt tab and press "Decrypt" to get `helloworld` ba
 | Number of polyline points | 1,000 points | Equal to the encryption limit, so every ciphertext made by this tool can be decrypted |
 | Polyline points input | 50,000 characters | Length of the whole text |
 
+### Practice problems
+
+- The problem number (1 to 999999) seeds an xorshift32 generator that picks the text and the key. The same mode and number always give the same problem, so a class can share a number
+- The key is a permutation of the 26 letters, never the default ABC…Z order, and has no duplicates (so a "without the key" problem can be solved as a monoalphabetic substitution cipher)
+- The texts are public-domain English. "With the key" uses proverbs and stock phrases (40 letters or fewer); "without the key" uses sentences long enough for frequency analysis (60 letters or more) from Lincoln's Gettysburg Address, the Declaration of Independence, Dickens, Shakespeare, Austen, Melville and F. D. Roosevelt
+- Answers are compared by letters only, uppercased (spaces, punctuation and case do not matter), and the number of letters matching in position is reported. A problem whose answer was shown does not count as correct
+- Hints come in order: column counts (descending, with the English frequency order ETAOINSHRDLU…), then the letters of the top 3 columns, then the key
+
 ### Japanese and English
 
 - The initial language is decided by `?lang=ja|en`, then the saved choice, then the browser language (anything other than Japanese gives English). The header button switches languages and the choice is saved in localStorage (the tool also works where localStorage is unavailable)
@@ -180,8 +193,9 @@ Enter these points in the Decrypt tab and press "Decrypt" to get `helloworld` ba
 ### Structure
 
 - `js/zz-core.js`: the computation core, pure functions without the DOM (key normalization and statistics, point coordinates, plaintext preparation, column choice, point parsing and formatting, nearest column, decryption, shuffle, column numbers and mapping, share link, SVG document and reading it back). The random source is injected
+- `js/zz-practice.js`: the practice core (problems by number, answer checking, hints)
 - `js/messages.js`: interface strings (Japanese and English). `js/i18n.js`: language selection and static text replacement
-- `script.js`: the interface (drawing, events, theme, language)
+- `script.js`: the interface (drawing, events, theme, language, practice)
 - The figure is drawn at its natural size (1 unit = 1 px) and scaled down to the box width when wider, but not below 0.55; the rest scrolls inside the box
 
 ---
@@ -189,7 +203,7 @@ Enter these points in the Decrypt tab and press "Decrypt" to get `helloworld` ba
 ## 🎯 Use cases
 
 - Learning security: confirm in the Analyze tab that the polyline ciphertext is a substitution cipher in disguise by turning it back into column numbers. Send the mapped text to Frequency Analyzer and go all the way to reading it by frequency analysis without the key. See how duplicate key letters (homophones) flatten the frequencies, and that none of it matters unless the key stays secret
-- Information and mathematics classes or self-study: understand that "a ciphertext need not be letters" and "the same information can live in dots and lines" hands-on, together with the coordinate formula (`x = 40 + 40 × column`). The "nearest column" rule of decryption is an entry point to quantization and nearest-neighbour ideas
+- Information and mathematics classes or self-study: understand that "a ciphertext need not be letters" and "the same information can live in dots and lines" hands-on, together with the coordinate formula (`x = 40 + 40 × column`). The "nearest column" rule of decryption is an entry point to quantization and nearest-neighbour ideas. Share a problem number from the Practice tab and the whole class solves the same problem
 - Research into cipher history: try out Rampo's category (line substitution) and the same idea as Aeneas' threaded die by actually drawing the figure. Produce figures (PNGs of polyline ciphertexts) for fanzines and talks
 - Puzzle events, escape rooms and ARGs: hand out the polyline alone as SVG or PNG with the key hidden, or a share link (no key), and let participants guess the key. Deliver the key order through another clue to build a multi-stage puzzle
 - Letters and treasure hunts for children: turn a treasure map of the house or a birthday message into a polyline and hand it over together with the key strip
@@ -252,26 +266,30 @@ zigzag-cipherlab/
 │   │   ├── screenshot2.png # Polyline with the key hidden
 │   │   ├── screenshot3.png # Decrypt tab
 │   │   ├── screenshot4.png # Learn tab (dark)
-│   │   └── screenshot5.png # Analyze tab
+│   │   ├── screenshot5.png # Analyze tab
+│   │   └── screenshot6.png # Practice tab
 │   ├── screenshot.png      # Encrypt tab (HAPPY HACKING, key shown)
 │   ├── screenshot2.png     # Polyline alone with the key hidden
 │   ├── screenshot3.png     # Decrypt tab
 │   ├── screenshot4.png     # Comparison table in the Learn tab (dark mode)
-│   └── screenshot5.png     # Analyze tab (Atbash with a reversed key)
+│   ├── screenshot5.png     # Analyze tab (Atbash with a reversed key)
+│   └── screenshot6.png     # Practice tab (problem 1 read with the key)
 ├── js/                     # Scripts loaded by the page
 │   ├── zz-core.js          # Computation core (no DOM: encryption, decryption, points, SVG document, analysis)
+│   ├── zz-practice.js      # Practice core (same quiz for each number, answer check, hints)
 │   ├── messages.js         # Interface strings (Japanese and English)
 │   └── i18n.js             # Language selection and static text replacement
 ├── test/                   # Automated tests (node --test)
 │   ├── load.js             # Helper that loads js/*.js into the tests
 │   ├── core.test.js        # Core tests (known answers, round trips, limits, randomness, SVG, analysis, share link)
+│   ├── practice.test.js    # Practice tests (determinism, round trip, answer check, hints)
 │   ├── html.test.js        # Static checks of index.html (CSP, aria, script order)
 │   ├── contrast.test.js    # Color contrast (dark and light)
 │   ├── format.test.js      # Line length, line count, where strings live
 │   ├── i18n.test.js        # Dictionary keys and the strings on the page
 │   └── readme.test.js      # README examples, tables, images, tree and wording (both languages)
-├── index.html              # The page (Key, Encrypt, Decrypt, Analyze and Learn tabs)
-├── script.js               # Interface logic (drawing, events, theme, language)
+├── index.html              # The page (Key, Encrypt, Decrypt, Analyze, Practice and Learn tabs)
+├── script.js               # Interface logic (drawing, events, theme, language, practice)
 ├── style.css               # Styles (dark and light themes, responsive)
 ├── package.json            # npm test (node --test, no dependencies)
 ├── CLAUDE.md               # Development guide for Claude Code
@@ -292,7 +310,7 @@ npm test
 
 - Node.js 22 or later. No dependencies (`node --test`)
 - Run automatically by GitHub Actions on every push and pull request
-- What is verified: the known answer with the default key (HELLOWORLD), Atbash with a reversed key (SVOOLDLIOW), 200 round trips with random keys and plaintexts, the limits (1,000 for key, plaintext and points), the column choice for duplicate key letters and the per-position memory, bias-free randomness, error detection when parsing points, that an SVG exported with the key hidden contains no key, the share link round trip, reading an SVG back, CSP and aria in index.html, color contrast, the dictionary keys and the strings on the page, and the examples, tables, images and directory tree of both READMEs
+- What is verified: the known answer with the default key (HELLOWORLD), Atbash with a reversed key (SVOOLDLIOW), 200 round trips with random keys and plaintexts, the limits (1,000 for key, plaintext and points), the column choice for duplicate key letters and the per-position memory, bias-free randomness, error detection when parsing points, that an SVG exported with the key hidden contains no key, the share link round trip, reading an SVG back, the practice problems (numbers 1 to 300 in both modes round-trip, determinism, answer checking, hints), CSP and aria in index.html, color contrast, the dictionary keys and the strings on the page, and the examples, tables, images and directory tree of both READMEs
 
 ---
 
