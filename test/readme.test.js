@@ -278,3 +278,22 @@ test('英語版の関連ツールの名前も YAML の title どおり', () => {
     assert.ok(readmeEn.includes(name), `${name} がない`);
   }
 });
+
+test('ユースケースの「このツールならではの使い方」の座標・量子化・アトバシュは計算部と同じ（日英）', () => {
+  const [ja, en] = [readme, readmeEn];
+  assert.equal(C.colX(7), 320);
+  const enc = C.encrypt('HELLOWORLD', KEY);
+  assert.equal(enc.points.length, 10);
+  assert.equal(C.decrypt(enc.points, KEY).text, 'helloworld');
+  for (const t of [ja, en]) assert.ok(t.includes('40 + 40 × 7 = 320') && t.includes('HELLOWORLD') && t.includes('`helloworld`'));
+  const x7 = C.colX(7);
+  assert.equal(C.nearestKeyIndex(x7, 26), 7);
+  assert.equal(C.nearestKeyIndex(x7 + 19, 26), 7);
+  assert.equal(C.nearestKeyIndex(x7 - 19, 26), 7);
+  assert.notEqual(C.nearestKeyIndex(x7 + 21, 26), 7);
+  assert.ok(ja.includes('±19まで') && en.includes('±19'));
+  const rev = [...KEY].reverse().join('');
+  const atbash = C.columnLetters(C.columnSequence(C.encrypt('HELLOWORLD', rev).points, 26).indices, 26);
+  assert.equal(atbash, 'SVOOLDLIOW');
+  for (const t of [ja, en]) assert.ok(t.includes('`' + rev + '`') && t.includes('`SVOOLDLIOW`'));
+});
