@@ -511,20 +511,13 @@ function drawAnalyzeChart(points, keyLen){
    ========================= */
 
 // --- Theme Management ---
-function readSavedTheme(){
-  try { return localStorage.getItem('zigzag-theme'); } catch(e){ return null; }
-}
 function saveTheme(theme){
   try { localStorage.setItem('zigzag-theme', theme); } catch(e){ /* 保存できなくても切り替えは効く */ }
 }
 
+// 初回のテーマは <head> の js/theme-init.js が最初の描画の前に決める。ここではボタンを合わせるだけ
 function initTheme(){
-  const savedTheme = readSavedTheme();
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = (savedTheme === 'dark' || savedTheme === 'light') ? savedTheme : (prefersDark ? 'dark' : 'light');
-
-  document.documentElement.setAttribute('data-theme', theme);
-  updateThemeIcon(theme);
+  updateThemeIcon(document.documentElement.getAttribute('data-theme') || 'dark');
 }
 
 function updateThemeIcon(theme){

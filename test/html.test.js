@@ -32,9 +32,9 @@ test('インラインのイベントハンドラーと style 属性がない', (
   assert.doesNotMatch(html, /javascript:/i);
 });
 
-test('スクリプトは計算部・文言・画面の順に読み込む', () => {
+test('スクリプトはテーマ・計算部・文言・画面の順に読み込む', () => {
   const srcs = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
-  assert.deepEqual(srcs, ['js/zz-core.js', 'js/zz-practice.js', 'js/messages.js', 'js/i18n.js', 'script.js']);
+  assert.deepEqual(srcs, ['js/theme-init.js', 'js/zz-core.js','js/zz-practice.js', 'js/messages.js', 'js/i18n.js', 'script.js']);
 });
 
 test('主要な要素の id がそろっている', () => {

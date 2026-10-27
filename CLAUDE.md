@@ -18,7 +18,7 @@ Note: in English, "zigzag cipher" usually means the rail fence cipher (a transpo
 
 ## File Structure
 
-- `index.html` - Single page with 6 tabs (鍵生成/Key, 暗号化/Encrypt, 復号/Decrypt, 解析/Analyze, 練習/Practice, 座学/Learn). Loads `js/zz-core.js`, `js/zz-practice.js`, `js/messages.js`, `js/i18n.js`, `script.js` in that order. Every visible string carries `data-i18n` (textContent) or `data-i18n-attr` (attributes such as aria-label and placeholder)
+- `index.html` - Single page with 6 tabs (鍵生成/Key, 暗号化/Encrypt, 復号/Decrypt, 解析/Analyze, 練習/Practice, 座学/Learn). Loads `js/theme-init.js` in `<head>` right after the stylesheet (sets `data-theme` before the first paint), then `js/zz-core.js`, `js/zz-practice.js`, `js/messages.js`, `js/i18n.js`, `script.js` in that order at the end of `<body>`. Every visible string carries `data-i18n` (textContent) or `data-i18n-attr` (attributes such as aria-label and placeholder)
 - `js/zz-core.js` - Pure computation (`globalThis.ZZCore`, no DOM): key normalization/stats, point coordinates, plaintext preparation, column choice (RNG injected; `makeChooser('random'|'cycle'|'first')`), points text parse/format, nearest column, decrypt, shuffle, column counts/sequence/letters, Frequency Analyzer URL, share link (`#points=`), reading points from a hash or an SVG text, standalone SVG document
 - `js/zz-practice.js` - Practice core (`globalThis.ZZPractice`, depends on ZZCore): `makeQuiz(mode, seed)` (mode `read` or `guess`, seed 1..999999, xorshift32 like Day049), public-domain `SHORT_TEXTS`/`LONG_TEXTS`, `checkAnswer`, `frequencyHint`, `revealHint`
 - `js/messages.js` - UI strings (`globalThis.ZZMessages`, `t(key, vars)`, `setLanguage`, `getLanguage`). `ja` and `en` have the same keys. `script.js` must not contain Japanese string literals
